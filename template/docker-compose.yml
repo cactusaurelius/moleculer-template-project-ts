@@ -42,6 +42,7 @@ services:
     networks:
       - internal
 {{/apiGW}}
+
 {{#userService}}
   user:
     build:
@@ -51,8 +52,8 @@ services:
     environment:
       SERVICES: user
     {{#hasDepends}}
-      depends_on:
-       {{/hasDepends}}
+    depends_on:
+    {{/hasDepends}}
     {{#if_eq transporter "NATS"}}
        - nats
        {{/if_eq}}
