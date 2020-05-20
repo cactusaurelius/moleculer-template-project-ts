@@ -54,7 +54,7 @@ export class Config {
   };{{/userService}}{{#dbService}}
   public static DB_PRODUCT: DBInfo = {
     dialect: getDbInfo('PRODUCT', 'DIALECT', 'local') as DBDialog,
-    user: getDbInfo('PRODUCT', 'PRODUCT', ''),
+    user: getDbInfo('PRODUCT', 'USER', ''),
     password: getDbInfo('PRODUCT', 'PASSWORD', ''),
     host: getDbInfo('PRODUCT', 'HOST', ''),
     port: +getDbInfo('PRODUCT', 'PORT', '0'),
