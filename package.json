@@ -5,9 +5,11 @@
   "main": "meta.js",
   "scripts": {
     "dev": "rimraf tmp && moleculer init . tmp",
-    "build": "rimraf tmp && moleculer init --answers test/now.sh/answers.json --install . tmp",
+    "build": "npm run generate && npm run buid:tmp",
+    "generate": "rimraf tmp && moleculer init --answers test/now.sh/answers.json --install . tmp",
+    "build:tmp": "cd tmp && npm run build",
     "test": "moleculer init --answers test/ci/answers.json --install . ci-test",
-    "start": "cd tmp && npm run build && node node_modules/moleculer/bin/moleculer-runner dist/services"
+    "start": "cd tmp && npm run start:dev"
   },
   "repository": {
     "type": "git",
