@@ -5,6 +5,7 @@
     "needCacher": true,
     "cacher": "Redis",
     "dbService": true,
+    "userService": true,
     "metrics": false,
     "tracing": false,
     "docker": true,

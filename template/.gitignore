@@ -62,3 +62,7 @@ typings/
 
 # JetBrains IDE
 .idea
+.DS_Store
+/data
+/dist
+.history/

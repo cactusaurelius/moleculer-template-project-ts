@@ -4,6 +4,7 @@
     "transporter": "NATS",
     "needCacher": false,
     "dbService": true,
+    "userService": true,
     "metrics": true,
     "tracing": true,
     "docker": true,

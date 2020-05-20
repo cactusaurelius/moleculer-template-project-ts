@@ -3,6 +3,7 @@
 	"needTransporter": false,
 	"needCacher": false,
 	"dbService": true,
+	"userService": true,
 	"metrics": false,
 	"tracing": false,
 	"docker": true,

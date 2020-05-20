@@ -1,14 +1,19 @@
-FROM node:current-alpine
+FROM node:alpine as builder
 
-ENV NODE_ENV=production
-
-RUN mkdir /app
 WORKDIR /app
+COPY package.json yarn.lock rollup.config.js tsconfig.json moleculer.config.ts ./
+RUN yarn install --frozen-lockfile
+COPY src /app/src
+RUN yarn build
 
-COPY package.json package-lock.json ./
+FROM node:alpine
 
-RUN npm install --production
+WORKDIR /app
+RUN chown node:node /app
+USER node
+COPY --chown=node:node --from=builder /app/dist ./dist
+COPY --chown=node:node package.json yarn.lock ./
 
-COPY . .
+RUN yarn install --frozen-lockfile --production && yarn cache clean
 
-CMD ["npm", "start"]
+CMD ["yarn", "start"]

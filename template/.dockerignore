@@ -2,5 +2,10 @@ docker-compose.env
 docker-compose.yml
 Dockerfile
 node_modules
-test
+tests
+test-old
+coverage
+data
 .vscode
+dist
+env

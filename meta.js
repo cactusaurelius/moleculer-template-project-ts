@@ -57,16 +57,22 @@ module.exports = function(values) {
 			},
 			{
 				type: "confirm",
+				name: "userService",
+				message: "Add User sample service? (authenticate)",
+				default: true
+			},
+			{
+				type: "confirm",
 				name: "metrics",
 				message: "Would you like to enable metrics?",
 				default: true
-			},			
+			},
 			{
 				type: "confirm",
 				name: "tracing",
 				message: "Would you like to enable tracing?",
 				default: true
-			},			
+			},
 			{
 				type: "confirm",
 				name: "docker",
@@ -94,16 +100,34 @@ module.exports = function(values) {
 		],
 
 		filters: {
-			"services/api.service.js": "apiGW",
+			"src/services/api.service.ts": "apiGW",
 			"public/**/*": "apiGW",
-			
-			"services/products.service.js": "dbService",
-			"mixins/db.mixin.js": "dbService",
-			"test/mixins/db.mixin.spec.js": "dbService",
-			"test/integration/products.service.spec.js": "dbService",
-			"test/unit/services/products.spec.js": "dbService",
-			
+
+			"src/services/products.service.ts": "dbService",
+			"tests/integration/services/products.service.spec.ts": "dbService",
+			"tests/unit/services/products.spec.ts": "dbService",
+			"database/development/dbname_product.csv": "dbService",
+			"database/production/dbname_product.csv": "dbService",
+			"database/test/dbname_product-test.csv": "dbService",
+
+			"src/services/user.service.ts": "userService",
+			"src/mixins/db-user.mixin.ts": "userService",
+			"src/types/user.ts": "userService",
+			"src/entities/converters/user/user-lang.converter.ts": "userService",
+			"src/entities/converters/user/user-role.converter.ts": "userService",
+			"src/entities/user.entity.ts": "userService",
+			"src/entities/index.ts": "userService",
+			"tests/helpers/user.helper.ts": "userService",
+			"tests/integration/services/user.service.spec.ts": "userService",
+			"tests/unit/entities/converters/user/user-lang.converter.spec.ts": "userService",
+			"tests/unit/entities/converters/user/user-role.converter.spec.ts": "userService",
+			"tests/unit/services/user.service.spec.ts": "userService",
+			"database/development/dbname_user.csv": "userService",
+			"database/production/dbname_user.csv": "userService",
+			"database/test/dbname_user-test.csv": "userService",
+
 			".eslintrc.js": "lint",
+			".eslintignore": "lint",
 
 			".dockerignore": "docker",
 			"docker-compose.*": "docker",

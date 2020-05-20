@@ -1,41 +1,65 @@
 {
   "name": "{{projectName}}",
-  "version": "1.0.0",
+  "private": true,
   "description": "My Moleculer-based microservices project",
+  "author": "",
+  "repository": "",
+  "license": "MIT",
   "scripts": {
-    "dev": "moleculer-runner --repl --hot services/**/*.service.js",
-    "start": "moleculer-runner",
-    "cli": "moleculer connect {{transporter}}",
-    "ci": "jest --watch",
-    "test": "jest --coverage"{{#lint}},
-    "lint": "eslint services"{{/lint}}{{#docker}},
+    "dev": "dotenv -e env/development.env -- ts-node ./node_modules/moleculer/bin/moleculer-runner.js --hot --repl --config moleculer.config.ts src/services/**/*.service.ts",
+    "start:ts": "ts-node ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts src/services/**/*.service.ts",
+    "start:prod": "dotenv -e env/production.env -- moleculer-runner --config dist/moleculer.config.js dist/services/**/*.service.js",
+    "start": "moleculer-runner --config dist/moleculer.config.js",
+    "cli": "moleculer connect NATS",
+    "build:clean": "rimraf dist",
+    "build:rollup": "rollup -c",
+    "build": "dotenv -e env/production.env -- run-s build:clean build:rollup",
+    "-- TEST --": "-------------------------------------------------------------------------------------------------------",
+    "test": "jest -i --verbose --colors",
+    "test:fakeci": "dotenv -e test.env -- yarn test",
+    "test:coverage": "yarn test --coverage",
+    "test:send-coverages": "run-p coverage:codecovs coverage:coveralls coverage:codacy",
+    "coverage:codecovs": "curl -s https://codecov.io/bash | bash",
+    "coverage:coveralls": "cat ./coverage/lcov.info | coveralls",
+    "coverage:codacy": "curl -fL https://coverage.codacy.com/get.sh -o get.sh && bash get.sh report -l typescript -r coverage/lcov.info",
+    "-- HELPERS --": "-------------------------------------------------------------------------------------------------------",
+    "ci": "yarn clean && yarn install",
+    "clean": "yarn clean:packages",
+    "clean:packages": "rm -fr yarn.lock package-lock.json dist node_modules",
+    "format": "pretty-quick \"*.ts\" --write --staged"{{#lint}},
+    "lint": "eslint -c .eslintrc.js --ext .ts,.js .",
+    "lint:fix": "yarn eslint --fix"{{/lint}}{{#docker}},
     "dc:up": "docker-compose up --build -d",
     "dc:logs": "docker-compose logs -f",
-    "dc:down": "docker-compose down"{{/docker}}
+    "dc:down": "docker-compose down",
+    "docker:nats": "docker run -d --name nats-main -p 4222:4222 -p 6222:6222 -p 8222:8222 nats",
+    "docker:mongo": "docker-compose -f docker-compose-mongo.yml up -d"{{/docker}}
   },
   "keywords": [
     "microservices",
     "moleculer"
   ],
-  "author": "",
-  "devDependencies": {
-    {{#lint}}
-    "eslint": "^6.8.0",
-    {{/lint}}
-    "jest": "^25.1.0",
-    "jest-cli": "^25.1.0",
-    "moleculer-repl": "^0.6.2"
-  },
   "dependencies": {
+    "@d0whc3r/moleculer-decorators": "^1.4.0",
+    "bcryptjs": "^2.4.3",
+    "cookie-parser": "^1.4.5",
+    "cors": "^2.8.5",
+    "csv-parse": "^4.9.1",
+    "helmet": "^3.22.0",
+    "json2typescript": "^1.4.1",
+    "jsonwebtoken": "^8.5.1",
+    "lodash": "^4.17.15",
+    "mkdirp": "^1.0.4",
     {{#apiGW}}
-    "moleculer-web": "^0.9.0",
+    "moleculer-web": "^0.9.1",
     {{/apiGW}}
     {{#dbService}}
-    "moleculer-db": "^0.8.4",
-    "moleculer-db-adapter-mongo": "^0.4.7",
+    "moleculer-db": "^0.8.7",
+    "moleculer-db-adapter-mongoose": "^0.8.4",
+    "mongoose": "^5.9.15",
     {{/dbService}}
     {{#if_eq transporter "NATS"}}
-    "nats": "^1.3.2",
+    "nats": "^1.4.9",
     {{/if_eq}}
     {{#if_eq transporter "MQTT"}}
     "mqtt": "^3.0.0",
@@ -53,19 +77,89 @@
     "kafka-node": "^5.0.0",
     {{/if_eq}}
     {{#redis}}
-    "ioredis": "^4.14.1",
+    "ioredis": "^4.17.1",
+    "redlock": "^4.1.0",
     {{/redis}}
-    "moleculer": "^0.14.0"
+    "moleculer": "^0.14.6"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^8.3.5",
+    "@commitlint/config-conventional": "^8.3.4",
+    "@rollup/plugin-commonjs": "^12.0.0",
+    "@rollup/plugin-json": "^4.0.3",
+    "@rollup/plugin-node-resolve": "^8.0.0",
+    "@rollup/plugin-typescript": "^4.1.2",
+    "@types/bcryptjs": "^2.4.2",
+    "@types/cookie-parser": "^1.4.2",
+    "@types/cors": "^2.8.6",
+    "@types/helmet": "^0.0.47",
+    "@types/jest": "^25.2.3",
+    "@types/jsonwebtoken": "^8.5.0",
+    "@types/lodash": "^4.14.152",
+    {{#userService}}
+    "@types/mongoose": "5.7.21",
+    "mongodb": "3.5.7",
+    {{/userService}}
+    "@types/mkdirp": "^1.0.0",
+    "@types/node": "^14.0.4",
+    "@types/rimraf": "^3.0.0",
+    "@types/supertest": "^2.0.9",
+    "builtin-modules": "^3.1.0",
+    "coveralls": "^3.1.0",
+    "dotenv": "^8.2.0",
+    "dotenv-cli": "^3.1.0",
+    {{#lint}}
+    "@typescript-eslint/eslint-plugin": "^2.34.0",
+    "@typescript-eslint/parser": "^2.34.0",
+    "eslint": "^7.0.0",
+    "eslint-config-prettier": "^6.11.0",
+    "eslint-plugin-prettier": "^3.1.3",
+    "eslint-plugin-sonarjs": "^0.5.0",
+    {{/lint}}
+    "glob": "^7.1.6",
+    "husky": "^4.2.5",
+    "jest": "^26.0.1",
+    "jest-chain": "^1.1.5",
+    "jest-cli": "^26.0.1",
+    "jest-extended": "^0.11.5",
+    "jest-junit": "^10.0.0",
+    "jest-sonar-reporter": "^2.0.0",
+    "lint-staged": "^10.2.4",
+    "moleculer-repl": "^0.6.4",
+    "npm-run-all": "^4.1.5",
+    "prettier": "^2.0.5",
+    "pretty-quick": "^2.0.1",
+    "rollup": "^2.10.5",
+    "rollup-plugin-auto-external": "^2.0.0",
+    "rollup-plugin-esbuild": "^1.4.1",
+    "rollup-plugin-node-builtins": "^2.1.2",
+    "rollup-plugin-terser": "^5.3.0",
+    "rollup-plugin-typescript2": "^0.27.1",
+    "supertest": "^4.0.2",
+    "ts-jest": "^26.0.0",
+    "ts-node": "^8.10.1",
+    "typescript": "^3.9.3"
   },
   "engines": {
-    "node": ">= 10.x.x"
+    "node": ">= 12.x.x"
   },
-  "jest": {
-    "coverageDirectory": "../coverage",
-    "testEnvironment": "node",
-    "rootDir": "./services",
-    "roots": [
-      "../test"
+  "jestSonar": {
+    "reportPath": "coverage",
+    "reportFile": "test-report.xml"
+  },
+  "jest-junit": {
+    "outputDirectory": "./coverage",
+    "outputName": "./coverage/junit.xml"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "yarn {{#lint}}eslint:fix && {{/lint}}lint-staged",
+      "commit-msg": "commitlint -E HUSKY_GIT_PARAMS"
+    }
+  },
+  "lint-staged": {
+    "**/*.ts": [
+      "yarn format"
     ]
   }
 }

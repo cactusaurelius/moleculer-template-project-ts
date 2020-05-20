@@ -1,13 +1,11 @@
 version: "3.3"
-
 services:
-
 {{#apiGW}}
   api:
     build:
       context: .
     image: {{projectName}}
-    env_file: docker-compose.env
+    env_file: env/production.env
     environment:
       SERVICES: api
       PORT: 3000
@@ -37,17 +35,54 @@ services:
 {{/if_eq}}
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.api-gw.rule=PathPrefix(`/`)"
-      - "traefik.http.services.api-gw.loadbalancer.server.port=3000"
+      - "traefik.http.routers.api-gw.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.api-gw.entrypoints=api"
+    ports:
+      - 3000
     networks:
       - internal
 {{/apiGW}}
+{{#userService}}
+  user:
+    build:
+      context: .
+    image: {{projectName}}
+    env_file: env/production.env
+    environment:
+      SERVICES: user
+    {{#hasDepends}}
+      depends_on:
+       {{/hasDepends}}
+    {{#if_eq transporter "NATS"}}
+       - nats
+       {{/if_eq}}
+    {{#redis}}
+       - redis
+       {{/redis}}
+    {{#if_eq transporter "MQTT"}}
+       - mqtt
+       {{/if_eq}}
+    {{#if_eq transporter "AMQP"}}
+       - rabbitmq
+       {{/if_eq}}
+    {{#if_eq transporter "AMQP10"}}
+       - activemq
+       {{/if_eq}}
+    {{#if_eq transporter "STAN"}}
+       - stan
+       {{/if_eq}}
+    {{#if_eq transporter "Kafka"}}
+       - zookeeper
+       {{/if_eq}}
+  networks:
+    - internal
+{{/userService}}
 
   greeter:
     build:
       context: .
     image: {{projectName}}
-    env_file: docker-compose.env
+    env_file: env/production.env
     environment:
       SERVICES: greeter
 {{#hasDepends}}
@@ -82,7 +117,7 @@ services:
     build:
       context: .
     image: {{projectName}}
-    env_file: docker-compose.env
+    env_file: env/production.env
     environment:
       SERVICES: products
     depends_on:
@@ -111,8 +146,26 @@ services:
     networks:
       - internal
 
+  mongo-express:
+    image: mongo-express
+    depends_on:
+      - mongo
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: username
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+    networks:
+      - internal
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.mongo-gw.rule=Host(`mongo-express.localhost`)"
+      - "traefik.http.routers.mongo-gw.entrypoints=mongo"
+
   mongo:
     image: mongo:4
+    command: --auth
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: username
+      MONGO_INITDB_ROOT_PASSWORD: password
     volumes:
       - data:/data/db
     networks:
@@ -183,14 +236,22 @@ services:
 
 {{#apiGW}}
   traefik:
-    image: traefik:v2.1
+    image: traefik:v2.2
     command:
       - "--api.insecure=true" # Don't do that in production!
+      # - "--providers.docker.domain=docker.localhost"
       - "--providers.docker=true"
       - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.api.address=:3000"
+      - "--entrypoints.mongo.address=:8081"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.backend=traefik"
+      - "traefik.port=8080"
     ports:
-      - 3000:80
-      - 3001:8080
+      - 3100:3000
+      - 3101:8080
+      - 3102:8081
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
