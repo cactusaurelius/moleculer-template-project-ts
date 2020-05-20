@@ -39,3 +39,4 @@ jspm_packages
 /tmp
 .idea/
 .history/
+.vercel
