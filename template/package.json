@@ -16,6 +16,7 @@
     "build": "dotenv -e env/production.env -- run-s build:clean build:rollup",
     "-- TEST --": "-------------------------------------------------------------------------------------------------------",
     "test": "jest -i --verbose --colors",
+    "test:watch": "jest -i --verbose --colors --watch",
     "test:fakeci": "dotenv -e test.env -- yarn test",
     "test:coverage": "yarn test --coverage",
     "test:send-coverages": "run-p coverage:codecovs coverage:coveralls coverage:codacy",
