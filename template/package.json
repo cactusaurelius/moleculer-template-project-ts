@@ -9,6 +9,7 @@
     "dev": "dotenv -e env/development.env -- ts-node ./node_modules/moleculer/bin/moleculer-runner.js --hot --repl --config moleculer.config.ts src/services/**/*.service.ts",
     "start:ts": "ts-node ./node_modules/moleculer/bin/moleculer-runner.js --config moleculer.config.ts src/services/**/*.service.ts",
     "start:prod": "dotenv -e env/production.env -- moleculer-runner --config dist/moleculer.config.js dist/services/**/*.service.js",
+    "start:dev": "dotenv -e env/development.env -- moleculer-runner --config dist/moleculer.config.js dist/services/**/*.service.js",
     "start": "moleculer-runner --config dist/moleculer.config.js",
     "cli": "moleculer connect NATS",
     "build:clean": "rimraf dist",
