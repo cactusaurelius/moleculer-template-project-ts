@@ -15,7 +15,7 @@ import {
   UserTokenParams,
   UserUpdateParams
 } from '../../../src/types';
-import { adminUser, disabledUser, superAdminUser, simpleUser } from '../../helpers/user.helper';
+import { adminUser, disabledUser, simpleUser, superAdminUser } from '../../helpers/user.helper';
 import { clearDB, randString, testConfig } from '../../helpers/helper';
 import { Config } from '../../../src/common';
 
@@ -252,11 +252,12 @@ describe('Unit tests for User service', () => {
     let context: Context<{}, UserAuthMeta>;
     beforeEach(() => {
       context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context.action = { name: 'user.get' };
     });
     it('not found', async () => {
       context.meta = { user: { ...simpleUser, _id: 'xxx' } };
       try {
-        await service.getUser(context);
+        await service.getMe(context);
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
@@ -264,7 +265,7 @@ describe('Unit tests for User service', () => {
     it('user info', async () => {
       context.meta = { user: { ...simpleUser } };
       try {
-        const response = await service.getUser(context);
+        const response = await service.getMe(context);
         expect(response)
           .toBeDefined()
           .toBeObject()
@@ -282,21 +283,22 @@ describe('Unit tests for User service', () => {
     let context: Context<UserGetParams, UserAuthMeta>;
     beforeEach(() => {
       context = new Context<UserGetParams, UserAuthMeta>(broker, endpoint);
+      context.action = { name: 'user.get.id' };
     });
     it('not found', async () => {
       context.meta = { user: superAdminUser };
-      context.params = { userId: 'xxx' };
+      context.params = { id: 'xxx' };
       try {
-        await service.getUserId(context);
+        await service.getUser(context);
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
     });
     it('user info', async () => {
       context.meta = { user: superAdminUser };
-      context.params = { userId: simpleUser._id };
+      context.params = { id: simpleUser._id };
       try {
-        const response = await service.getUserId(context);
+        const response = await service.getUser(context);
         expect(response)
           .toBeDefined()
           .toBeObject()
@@ -318,7 +320,7 @@ describe('Unit tests for User service', () => {
     it('not found', async () => {
       context.meta = { user: superAdminUser };
       context.params = {
-        userId: 'xxx',
+        id: 'xxx',
         ...simpleUser
       };
       try {
@@ -332,7 +334,7 @@ describe('Unit tests for User service', () => {
       const lastName = 'changed name';
       context.meta = { user: superAdminUser };
       context.params = {
-        userId: simpleUser._id,
+        id: simpleUser._id,
         ...simpleUser,
         firstName,
         lastName
@@ -356,10 +358,11 @@ describe('Unit tests for User service', () => {
     let context: Context<UserDeleteParams, UserAuthMeta>;
     beforeEach(() => {
       context = new Context<UserDeleteParams, UserAuthMeta>(broker, endpoint);
+      context.action = { name: 'user.remove' };
     });
     it('not found', async () => {
       context.meta = { user: superAdminUser };
-      context.params = { userId: 'xxx' };
+      context.params = { id: 'xxx' };
       try {
         await service.deleteUser(context);
       } catch (err) {
@@ -368,10 +371,10 @@ describe('Unit tests for User service', () => {
     });
     it('delete', async () => {
       context.meta = { user: superAdminUser };
-      context.params = { userId: adminUser._id };
+      context.params = { id: adminUser._id };
       await service.deleteUser(context);
       try {
-        await broker.call('user.get.id', { userId: adminUser._id });
+        await broker.call('user.get.id', { id: adminUser._id });
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
@@ -382,11 +385,19 @@ describe('Unit tests for User service', () => {
     let context: Context<{}, UserAuthMeta>;
     beforeEach(() => {
       context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context.action = { name: 'user.list' };
     });
     it('get all users', async () => {
       try {
         const response = await service.getAllUsers(context);
-        expect(response).toBeDefined().toBeArray();
+        expect(response)
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntries([
+            ['page', 1],
+            ['pageSize', 10],
+            ['totalPages', 1]
+          ]);
       } catch (err) {
         fail(err);
       }

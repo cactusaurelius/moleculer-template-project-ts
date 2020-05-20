@@ -5,6 +5,7 @@ import { Action, Delete, Get, Method, Post, Put, Service } from '@d0whc3r/molecu
 import {
   IUser,
   MoleculerDBService,
+  RestOptions,
   UserAuthMeta,
   UserCreateParams,
   UserDeleteParams,
@@ -17,14 +18,14 @@ import {
   UserServiceSettingsOptions,
   UsersServiceOptions,
   UserTokenParams,
-  UserUpdateParams,
-  RestOptions
+  UserUpdateParams
 } from '../types';
 import bcrypt from 'bcryptjs';
 import jwt, { VerifyErrors } from 'jsonwebtoken';
 import { JsonConvert } from 'json2typescript';
 import { UserEntity } from '../entities';
 import { constants } from 'http2';
+import { DbContextParameters } from 'moleculer-db';
 
 const validateUserBase: ActionParams = {
   login: 'string',
@@ -33,6 +34,16 @@ const validateUserBase: ActionParams = {
   lastName: { type: 'string', optional: true },
   activated: { type: 'boolean', optional: true },
   roles: { type: 'array', items: 'string' },
+  langKey: { type: 'string', min: 2, max: 2, optional: true }
+};
+
+const validateUserBaseOptional: ActionParams = {
+  login: { type: 'string', optional: true },
+  email: { type: 'email', optional: true },
+  firstName: { type: 'string', optional: true },
+  lastName: { type: 'string', optional: true },
+  activated: { type: 'boolean', optional: true },
+  roles: { type: 'array', items: 'string', optional: true },
   langKey: { type: 'string', min: 2, max: 2, optional: true }
 };
 
@@ -52,20 +63,6 @@ function encryptPassword(password: string) {
   }
 })
 export default class UserService extends MoleculerDBService<UserServiceSettingsOptions, IUser> {
-  @Method
-  generateJWT(user: UserJWT) {
-    const exp = new Date();
-    exp.setDate(exp.getDate() + 60);
-
-    return jwt.sign(
-      {
-        ...user,
-        exp: Math.floor(exp.getTime() / 1000)
-      },
-      this.settings.JWT_SECRET
-    );
-  }
-
   @Action({
     name: 'resolveToken',
     cache: {
@@ -176,56 +173,56 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     entity.password = encryptPassword(entity.password);
     const parsedEntity = new JsonConvert().deserializeObject(entity, UserEntity).getMongoEntity();
     const modEntity = this.updateAuthor(parsedEntity, { creator: ctx.meta.user });
-
-    const doc = await this.adapter.insert(modEntity);
-    const user: UserJWT = await this.transformDocuments(ctx, {}, doc);
-    await this.entityChanged('created', user, ctx);
-    return user;
+    return this._create(ctx, modEntity);
   }
 
   @Get<RestOptions>('/', {
     name: 'get',
-    auth: true
+    auth: true,
+    cache: {
+      keys: ['id', 'populate', 'fields', 'mapping']
+    }
   })
-  async getUser(ctx: Context<{}, UserAuthMeta>) {
-    return this.broker.call<UserJWT, any>('user.get.id', { userId: ctx.meta.user._id });
+  async getMe(ctx: Context<DbContextParameters, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._get(ctx, { ...params, id: ctx.meta.user._id });
   }
 
-  @Get<RestOptions>('/:userId', {
+  @Get<RestOptions>('/:id', {
     name: 'get.id',
     auth: true,
-    roles: UserRole.SUPERADMIN
-  })
-  async getUserId(ctx: Context<UserGetParams, UserAuthMeta>) {
-    const user = await this.getById(ctx.params.userId);
-    if (!user) {
-      throw new moleculer.Errors.MoleculerClientError('User not found!', constants.HTTP_STATUS_BAD_REQUEST);
+    roles: UserRole.SUPERADMIN,
+    cache: {
+      keys: ['id', 'populate', 'fields', 'mapping']
     }
-    return this.transformDocuments<UserJWT>(ctx, {}, user);
+  })
+  async getUser(ctx: Context<UserGetParams, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._get(ctx, params);
   }
 
-  @Put<RestOptions>('/:userId', {
+  @Put<RestOptions>('/:id', {
     name: 'update',
     auth: true,
     roles: UserRole.SUPERADMIN,
     params: {
-      ...validateUserBase,
+      ...validateUserBaseOptional,
       password: { type: 'string', optional: true },
-      userId: 'string'
+      id: 'string'
     }
   })
   async updateUser(ctx: Context<UserUpdateParams, UserAuthMeta>) {
-    const { userId } = ctx.params;
-    delete ctx.params.userId;
-    const user = await this.getById<IUser>(userId);
+    const { id } = ctx.params;
+    delete ctx.params.id;
+    const user = await this.getById<IUser>(id);
     if (!user) {
-      throw new moleculer.Errors.MoleculerClientError('User not found!', constants.HTTP_STATUS_BAD_REQUEST);
+      throw new moleculer.Errors.MoleculerClientError('User not found!', constants.HTTP_STATUS_NOT_FOUND);
     }
     const newUser = this.updateAuthor(
       {
         ...user,
         ...ctx.params,
-        _id: userId
+        _id: id
       },
       { modifier: ctx.meta.user }
     );
@@ -233,24 +230,21 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     if (password) {
       newUser.password = encryptPassword(password);
     }
-    const response = await this.adapter.updateById<IUser>(userId, newUser);
-    const parsed = this.transformDocuments<IUser>(ctx, {}, response);
-    await this.entityChanged('updated', parsed, ctx);
-    return parsed;
+    return this._update(ctx, newUser);
   }
 
-  @Delete<RestOptions>('/:userId', {
+  @Delete<RestOptions>('/:id', {
     name: 'remove',
     auth: true,
     roles: UserRole.SUPERADMIN
   })
   async deleteUser(ctx: Context<UserDeleteParams, UserAuthMeta>) {
     // TODO: Broadcast to delete in all related services
-    const { userId } = ctx.params;
-    delete ctx.params.userId;
-    const user = await this.broker.call<UserJWT, any>('user.get.id', { userId });
-    await this.adapter.removeById<number>(userId);
-    await this.entityChanged('removed', user, ctx);
+    if (ctx.params.id === ctx.meta.user._id) {
+      throw new moleculer.Errors.MoleculerClientError('User can not delete itself!', constants.HTTP_STATUS_BAD_REQUEST);
+    }
+    const params = this.sanitizeParams(ctx, ctx.params);
+    await this._remove(ctx, params);
     // eslint-disable-next-line require-atomic-updates
     ctx.meta.$statusCode = constants.HTTP_STATUS_ACCEPTED;
   }
@@ -258,11 +252,28 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
   @Get<RestOptions>('/all', {
     name: 'list',
     auth: true,
-    roles: UserRole.SUPERADMIN
+    roles: UserRole.SUPERADMIN,
+    cache: {
+      keys: ['populate', 'fields', 'page', 'pageSize', 'sort', 'search', 'searchFields', 'query']
+    }
   })
-  async getAllUsers(ctx: Context<{}, UserAuthMeta>) {
-    const users = await this.adapter.find<IUser[]>({});
-    return this.transformDocuments<UserJWT[]>(ctx, {}, users);
+  async getAllUsers(ctx: Context<DbContextParameters, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._list(ctx, params);
+  }
+
+  @Method
+  private generateJWT(user: UserJWT) {
+    const exp = new Date();
+    exp.setDate(exp.getDate() + 60);
+
+    return jwt.sign(
+      {
+        ...user,
+        exp: Math.floor(exp.getTime() / 1000)
+      },
+      this.settings.JWT_SECRET
+    );
   }
 
   @Method

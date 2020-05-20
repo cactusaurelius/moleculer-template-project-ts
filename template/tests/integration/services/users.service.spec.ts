@@ -145,7 +145,14 @@ describe('Integration tests for Users service', () => {
     it('info', async () => {
       const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, token);
       expect(response.status).toBe(constants.HTTP_STATUS_OK);
-      expect(response.body).toBeDefined().toBeArray();
+      expect(response.body)
+        .toBeDefined()
+        .toBeObject()
+        .toContainEntries([
+          ['page', 1],
+          ['pageSize', 10],
+          ['totalPages', 1]
+        ]);
     });
     it('info with admin', async () => {
       const adminToken = await getJWT(server, adminUser.login);
@@ -219,7 +226,7 @@ describe('Integration tests for Users service', () => {
     const user: UserUpdateParams = {
       ...simpleUser,
       firstName: 'other name',
-      userId: simpleUser._id
+      id: simpleUser._id
     };
     beforeEach(async () => {
       testUrl = `/api/user/${simpleUser._id}`;

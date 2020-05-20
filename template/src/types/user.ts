@@ -1,5 +1,5 @@
 import { Options } from '@d0whc3r/moleculer-decorators';
-import { DbServiceSettings } from 'moleculer-db';
+import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
 import { ApiGatewayMeta } from './interfaces';
 
 export interface UserServiceSettingsOptions extends DbServiceSettings {
@@ -62,16 +62,16 @@ export interface UserRolesParams {
 }
 
 export interface UserUpdateParams extends Partial<IUserBase> {
-  userId: string;
+  id: string;
   password?: string;
 }
 
-export interface UserGetParams {
-  userId: string;
+export interface UserGetParams extends DbContextParameters {
+  id: string;
 }
 
-export interface UserDeleteParams {
-  userId: string;
+export interface UserDeleteParams extends DbContextParameters {
+  id: string;
 }
 
 // META
