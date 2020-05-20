@@ -1,4 +1,4 @@
-import { model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
+import { models, model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
 import { IProduct } from '../types';
 
 type definitionType = () => Record<keyof Required<IProduct>, SchemaTypeOpts<any> | Schema | SchemaType>;
@@ -26,5 +26,5 @@ const definition: definitionType = () => ({
 
 export const productMongoModel = (collection: string) => {
   const schema = new Schema<IProduct>(definition(), { autoIndex: true });
-  return model(collection, schema);
+  return models[collection] || model(collection, schema);
 };

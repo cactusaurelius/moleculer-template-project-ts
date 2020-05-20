@@ -1,4 +1,4 @@
-import { model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
+import { models, model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
 import { IUser, UserLang, UserRole } from '../types';
 
 type definitionType = (collection: string) => Record<keyof Required<IUser>, SchemaTypeOpts<any> | Schema | SchemaType>;
@@ -71,5 +71,5 @@ const definition: definitionType = (collection: string) => ({
 
 export const userMongoModel = (collection: string) => {
   const schema = new Schema<IUser>(definition(collection), { autoIndex: true });
-  return model(collection, schema);
+  return models[collection] || model(collection, schema);
 };
