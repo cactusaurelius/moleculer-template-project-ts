@@ -40,8 +40,12 @@ describe('Unit tests for Api service', () => {
       context = new Context<{}, UserAuthMeta>(broker, endpoint);
     });
 
-    it('without headers', () => {
-      expect(service.authenticate(context, undefined, mockRequest)).resolves.toBeNull();
+    it('without headers', async () => {
+      try {
+        await service.authenticate(context, undefined, mockRequest);
+      } catch (err) {
+        expect(err).toBeInstanceOf(ApiGatewayService.Errors.UnAuthorizedError);
+      }
     });
     it('with headers with wrong token', (done) => {
       expect.assertions(1);
@@ -113,7 +117,8 @@ describe('Unit tests for Api service', () => {
     beforeEach(() => {
       mockRequest = {
         headers: {},
-        $action: {}
+        $action: {},
+        $route: {}
       };
       context = new Context<{}, UserAuthMeta>(broker, endpoint);
     });
@@ -122,10 +127,9 @@ describe('Unit tests for Api service', () => {
 
     it('without auth', async () => {
       try {
-        const response = await service.authorize(context, undefined, mockRequest);
-        expect(response).toBeNull();
+        await service.authorize(context, undefined, mockRequest);
       } catch (err) {
-        fail(err);
+        expect(err).toBeInstanceOf(ApiGatewayService.Errors.UnAuthorizedError);
       }
     });
     it('with auth false', async () => {
@@ -148,6 +152,8 @@ describe('Unit tests for Api service', () => {
     it('with auth and with user', async () => {
       Context.prototype.call = jest.fn().mockResolvedValue(true);
       mockRequest.$action.auth = true;
+      mockRequest.$action.roles = [];
+      mockRequest.$route.opts = { roles: [] };
       context.meta.user = user;
       try {
         const response = await service.authorize(context, undefined, mockRequest);
@@ -159,6 +165,8 @@ describe('Unit tests for Api service', () => {
     it('with auth and with user and wrong response', async () => {
       Context.prototype.call = jest.fn().mockResolvedValue(false);
       mockRequest.$action.auth = true;
+      mockRequest.$action.roles = [];
+      mockRequest.$route.opts = { roles: [] };
       context.meta.user = user;
       try {
         await service.authorize(context, undefined, mockRequest);

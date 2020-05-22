@@ -8,8 +8,8 @@ import { adminUser, disabledUser, getJWT, simpleUser, superAdminUser } from '../
 import { UserCreateParams, UserJWT, UserLang, UserRole, UserUpdateParams } from '../../../src/types';
 import { Config } from '../../../src/common';
 
-async function loginTest(server: Service, info: { user: UserJWT; password: string; url?: string }) {
-  const { user, password, url = '/api/user/login' } = info;
+async function loginTest(server: string, info: { user: UserJWT; password: string; url?: string }) {
+  const { user, password, url = '/auth/login' } = info;
   const response = await request(server).post(url).send({
     login: user.login,
     password
@@ -32,21 +32,31 @@ const broker = new ServiceBroker(testConfig);
 const userService = broker.createService(TestingService);
 const apiService = broker.createService(ApiService);
 
+function getServer(server: Service) {
+  return new Promise<string>((resolve) => {
+    const interval = setInterval(() => {
+      const addr = server.address();
+      if (addr) {
+        clearInterval(interval);
+        resolve(`http://${addr.address}:${addr.port}`);
+      }
+    }, 10);
+  });
+}
+
 describe('Integration tests for Users service', () => {
-  let server: Service;
+  let server: string;
   let testUrl = '';
   let token = '';
 
   beforeEach(async () => {
     await clearDB(Config.DB_USER);
-    await broker.start();
+    if (!broker.started) {
+      await broker.start();
+    }
     await broker.waitForServices(userService.name);
     await broker.waitForServices(apiService.name);
-    if (!server) {
-      await wait(1);
-    }
-    // eslint-disable-next-line require-atomic-updates
-    server = apiService.server;
+    server = await getServer(apiService.server);
     await wait(0);
   });
 
@@ -58,7 +68,7 @@ describe('Integration tests for Users service', () => {
 
   describe('login', () => {
     beforeEach(() => {
-      testUrl = '/api/user/login';
+      testUrl = '/auth/login';
     });
     it('wrong login', async () => {
       const response = await request(server).post(testUrl).send({
@@ -136,7 +146,7 @@ describe('Integration tests for Users service', () => {
 
   describe('Get All Users', () => {
     beforeEach(async () => {
-      testUrl = '/api/user/all';
+      testUrl = '/api/user/list';
       token = await getJWT(server);
     });
     it('wrong token', async () => {

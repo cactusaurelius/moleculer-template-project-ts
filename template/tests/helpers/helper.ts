@@ -50,7 +50,7 @@ interface CheckWrongInfo {
   body?: string | object;
 }
 
-export async function checkWrongToken(server: Service, infoUrl: string, info: CheckWrongInfo = {}) {
+export async function checkWrongToken(server: string, infoUrl: string, info: CheckWrongInfo = {}) {
   const { token = 'Bearer WrongToken', method = 'get', body = undefined } = info;
   const response = await request(server)[method](infoUrl).send(body).set('Authorization', token);
   expect(response.status).toBe(constants.HTTP_STATUS_UNAUTHORIZED);

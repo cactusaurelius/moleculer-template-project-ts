@@ -46,7 +46,7 @@ export const disabledUser: UserJWT = {
   activated: false
 };
 
-export async function getJWT(server: Service, login = superAdminUser.login, password = '123456', round = 0): Promise<string> {
+export async function getJWT(server: string, login = superAdminUser.login, password = '123456', round = 0): Promise<string> {
   const loginUrl = '/api/user/login';
   const response = await request(server).post(loginUrl).send({ login, password });
   if (response.status !== 200 && round < 2) {
