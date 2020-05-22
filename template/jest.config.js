@@ -1,10 +1,9 @@
 module.exports = {
-  moduleFileExtensions: ['js', 'jsx', 'json', 'ts', 'tsx'],
+  moduleFileExtensions: ['js', 'json', 'ts'],
   transform: {
     '^.+\\.tsx?$': 'ts-jest'
   },
   testMatch: ['**/tests/**/*.spec.ts', '**/__test__/*.ts'],
-  testURL: 'http://localhost/',
   collectCoverage: false,
   coverageDirectory: 'coverage',
   collectCoverageFrom: ['src/**/*.ts'],
