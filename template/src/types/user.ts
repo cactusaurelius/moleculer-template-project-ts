@@ -3,7 +3,7 @@ import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
 import { ApiGatewayMeta } from './interfaces';
 
 export interface UserServiceSettingsOptions extends DbServiceSettings {
-  rest: '/api/user';
+  rest: '/user';
   JWT_SECRET: string;
   fields: (keyof Required<UserJWT>)[];
 }

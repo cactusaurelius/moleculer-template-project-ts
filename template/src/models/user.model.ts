@@ -1,9 +1,7 @@
-import { models, model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
-import { IUser, UserLang, UserRole } from '../types';
+import { model, models, Schema, Types } from 'mongoose';
+import { definitionType, IUser, UserLang, UserRole } from '../types';
 
-type definitionType = (collection: string) => Record<keyof Required<IUser>, SchemaTypeOpts<any> | Schema | SchemaType>;
-
-const definition: definitionType = (collection: string) => ({
+const definition: definitionType<IUser> = (collection?: string) => ({
   _id: Types.ObjectId,
   login: {
     type: String,
@@ -65,7 +63,8 @@ const definition: definitionType = (collection: string) => ({
     required: false
   },
   lastModifiedDate: {
-    type: Date
+    type: Date,
+    required: false
   }
 });
 

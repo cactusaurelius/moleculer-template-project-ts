@@ -1,9 +1,7 @@
-import { models, model, Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
-import { IProduct } from '../types';
+import { model, models, Schema, Types } from 'mongoose';
+import { definitionType, IProduct } from '../types';
 
-type definitionType = () => Record<keyof Required<IProduct>, SchemaTypeOpts<any> | Schema | SchemaType>;
-
-const definition: definitionType = () => ({
+const definition: definitionType<IProduct> = () => ({
   _id: Types.ObjectId,
   name: {
     type: String,

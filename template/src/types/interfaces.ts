@@ -1,7 +1,10 @@
-import { ActionSchema } from 'moleculer';
+import { ActionSchema, ActionParamSchema } from 'moleculer';
 import { IncomingMessage } from 'http';
 import { ActionOptions } from '@d0whc3r/moleculer-decorators';
 import { UserRole } from './user';
+import { Schema, SchemaType, SchemaTypeOpts } from 'mongoose';
+
+export type definitionType<T> = (collection?: string) => Record<keyof Required<T>, SchemaTypeOpts<any> | Schema | SchemaType>;
 
 export type DBDialog = 'local' | 'file' | 'mongodb';
 
@@ -15,8 +18,35 @@ export interface DBInfo {
   collection: string;
 }
 
+export interface RouteSchemaOpts {
+  path: string;
+  whitelist?: string[];
+  authorization?: boolean;
+  authentication?: boolean;
+  roles?: UserRole[];
+  aliases?: any;
+}
+
+export interface RouteSchema {
+  path: string;
+  mappingPolicy?: 'restricted' | 'all';
+  opts: RouteSchemaOpts;
+  middlewares: ((req: any, res: any, next: any) => void)[];
+  authorization?: boolean;
+  authentication?: boolean;
+  logging?: boolean;
+  etag?: boolean;
+  cors?: any;
+  rateLimit?: any;
+  whitelist?: string[];
+  hasWhitelist: boolean;
+  callOptions?: any;
+}
+
 export interface RequestMessage extends IncomingMessage {
   $action: ActionSchema;
+  $params: ActionParamSchema;
+  $route: RouteSchema;
 }
 
 export interface RestOptions extends ActionOptions {
@@ -24,7 +54,6 @@ export interface RestOptions extends ActionOptions {
   roles?: UserRole | UserRole[];
 }
 
-// META
 export interface ApiGatewayMeta {
   $statusCode?: number;
   $statusMessage?: string;
