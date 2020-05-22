@@ -7,7 +7,7 @@ import { Response } from 'express';
 import pick from 'lodash/pick';
 import { Config } from '../common';
 import { Method, Service } from '@d0whc3r/moleculer-decorators';
-import { RequestMessage, UserAuthMeta, UserJWT, UserRolesParams, UserTokenParams } from '../types';
+import { RequestMessage, UserAuthMeta, UserJWT, UserRole, UserRolesParams, UserTokenParams } from '../types';
 
 @Service({
   name: 'api',
@@ -26,18 +26,114 @@ import { RequestMessage, UserAuthMeta, UserJWT, UserRolesParams, UserTokenParams
         methods: 'GET,HEAD,PUT,POST,DELETE',
         preflightContinue: false,
         optionsSuccessStatus: 204,
-        allowedHeaders: ['Content-Type', 'Authorization'],
-        exposedHeaders: ['Content-Type', 'Authorization']
+        allowedHeaders: '*',
+        //exposedHeaders: "*",
+        credentials: true,
+        maxAge: undefined
+        // allowedHeaders: ['Content-Type', 'Authorization'],
+        // exposedHeaders: ['Content-Type', 'Authorization']
       }),
       cookieParser(),
       helmet()
     ],
 
+    rateLimit: {
+      window: 10 * 1000,
+      limit: 10,
+      headers: true
+    },
+
+    etag: true,
+
+    path: '/',
+    logging: true,
+
     routes: [
       {
-        path: '/',
+        path: '/auth',
+        authorization: false,
+        authentication: false,
+        whitelist: ['user.login'],
+        aliases: {
+          'POST /login': 'user.login'
+        }
+      },
+      {
+        path: '/admin',
+        whitelist: ['$node.*', 'api.listAliases'],
+        authorization: true,
+        authentication: true,
+        roles: [UserRole.SUPERADMIN],
+        aliases: {
+          'GET /health': '$node.health',
+          'GET /services': '$node.services',
+          'GET /actions': '$node.actions',
+          'GET /list': '$node.list',
+          'GET /metrics': '$node.metrics',
+          'GET /events': '$node.events',
+          'GET /options': '$node.options',
+          'GET /aliases': 'api.listAliases'
+        }
+      },
+      {
+        path: '/api/document',
+        authentication: true,
+        authorization: true,
+        roles: [],
+        bodyParsers: {
+          json: false,
+          urlencoded: false
+        },
 
-        whitelist: ['**'],
+        aliases: {
+          'GET /download': 'file.get'
+        },
+
+        // https://github.com/mscdex/busboy#busboy-methods
+        busboyConfig: {
+          limits: {
+            files: 1
+          }
+        },
+        mappingPolicy: 'restrict'
+      },
+      {
+        path: '/api/document',
+        authentication: true,
+        authorization: true,
+        roles: [UserRole.SUPERADMIN, UserRole.ADMIN, UserRole.MODIFIER],
+        bodyParsers: {
+          json: false,
+          urlencoded: false
+        },
+
+        aliases: {
+          'POST /upload': 'multipart:file.save',
+          'PUT /upload': 'stream:file.save',
+          'POST /multi': {
+            type: 'multipart',
+            // Action level busboy config
+            busboyConfig: {
+              limits: {
+                files: 3,
+                fileSize: 50 * 1024 * 1024
+              }
+            },
+            action: 'file.save'
+          }
+        },
+
+        // https://github.com/mscdex/busboy#busboy-methods
+        busboyConfig: {
+          limits: {
+            files: 1
+          }
+        },
+        mappingPolicy: 'restrict'
+      },
+      {
+        path: '/api',
+        whitelist: [/^(?!\$node\..*|user\.login|api\.listAliases).*/],
 
         // Route-level Express middlewares. More info: https://moleculer.services/docs/0.14/moleculer-web.html#Middlewares
         use: [],
@@ -86,11 +182,11 @@ import { RequestMessage, UserAuthMeta, UserJWT, UserRolesParams, UserTokenParams
         bodyParsers: {
           json: {
             strict: false,
-            limit: '1MB'
+            limit: '50MB'
           },
           urlencoded: {
             extended: true,
-            limit: '1MB'
+            limit: '50MB'
           }
         },
 
@@ -158,25 +254,28 @@ export default class ApiService extends moleculer.Service {
       }
       return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
     }
-    return Promise.resolve(null);
+    // return Promise.resolve(null);
+    return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
   }
 
   @Method
   async authorize(ctx: Context<{}, UserAuthMeta>, route: any, req: RequestMessage) {
     const user = ctx.meta.user;
 
-    if (req.$action.auth) {
-      if (!user) {
-        return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
-      }
-      const aroles = req.$action.roles || [];
-      const roles = Array.isArray(aroles) ? aroles : [aroles];
-      const valid = await ctx.call<boolean, UserRolesParams>('user.validateRole', { roles });
-      if (!valid) {
-        return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
-      }
-      return Promise.resolve({ ...ctx, meta: { user } });
+    if (req.$action.auth === false) {
+      return Promise.resolve(null);
     }
-    return Promise.resolve(null);
+    if (!user) {
+      return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
+    }
+    const aroles = Array.isArray(req.$action.roles) ? req.$action.roles : [req.$action.roles];
+    const oroles = Array.isArray(req.$route.opts.roles) ? req.$route.opts.roles : [req.$route.opts.roles];
+    const allRoles = [...aroles, ...oroles].filter(Boolean);
+    const roles = [...new Set(allRoles)];
+    const valid = await ctx.call<boolean, UserRolesParams>('user.validateRole', { roles });
+    if (!valid) {
+      return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
+    }
+    return Promise.resolve({ ...ctx, meta: { user } });
   }
 }

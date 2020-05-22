@@ -9,7 +9,7 @@ import { IProduct, MoleculerDBService, ProductServiceSettingsOptions, ProductsMa
   settings: {
     idField: '_id',
     pageSize: 10,
-    rest: '/api/products',
+    rest: '/products',
     fields: ['_id', 'name', 'quantity', 'price'],
     entityValidator: {
       name: 'string|min:3',

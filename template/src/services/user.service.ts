@@ -57,7 +57,7 @@ function encryptPassword(password: string) {
   settings: {
     idField: '_id',
     pageSize: 10,
-    rest: '/api/user',
+    rest: '/user',
     JWT_SECRET: Config.JWT_SECRET,
     fields: ['_id', 'login', 'firstName', 'lastName', 'email', 'langKey', 'roles', 'activated']
   }
@@ -107,7 +107,14 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     return !roles || !roles.length || roles.some((r) => userRoles.includes(r));
   }
 
-  @Post('/login', {
+  // @Post('/login', {
+  //   name: 'login',
+  //   params: {
+  //     login: { type: 'string' },
+  //     password: { type: 'string', min: 1 }
+  //   }
+  // })
+  @Action({
     name: 'login',
     params: {
       login: { type: 'string' },
@@ -142,9 +149,15 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     return user;
   }
 
+  @Get<RestOptions>('/logout', {
+    name: 'logout'
+  })
+  logout(ctx: Context<{}, UserAuthMeta>) {
+    console.log('user logout', ctx.meta.user);
+  }
+
   @Post<RestOptions>('/', {
     name: 'create',
-    auth: true,
     roles: UserRole.SUPERADMIN,
     params: {
       ...validateUserBase,
@@ -178,7 +191,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
   @Get<RestOptions>('/', {
     name: 'get',
-    auth: true,
     cache: {
       keys: ['id', 'populate', 'fields', 'mapping']
     }
@@ -190,7 +202,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
   @Get<RestOptions>('/:id', {
     name: 'get.id',
-    auth: true,
     roles: UserRole.SUPERADMIN,
     cache: {
       keys: ['id', 'populate', 'fields', 'mapping']
@@ -203,7 +214,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
   @Put<RestOptions>('/:id', {
     name: 'update',
-    auth: true,
     roles: UserRole.SUPERADMIN,
     params: {
       ...validateUserBaseOptional,
@@ -235,7 +245,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
   @Delete<RestOptions>('/:id', {
     name: 'remove',
-    auth: true,
     roles: UserRole.SUPERADMIN
   })
   async deleteUser(ctx: Context<UserDeleteParams, UserAuthMeta>) {
@@ -249,21 +258,20 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     ctx.meta.$statusCode = constants.HTTP_STATUS_ACCEPTED;
   }
 
-  @Get<RestOptions>('/all', {
+  @Get<RestOptions>('/list', {
     name: 'list',
-    auth: true,
     roles: UserRole.SUPERADMIN,
     cache: {
       keys: ['populate', 'fields', 'page', 'pageSize', 'sort', 'search', 'searchFields', 'query']
     }
   })
-  async getAllUsers(ctx: Context<DbContextParameters, UserAuthMeta>) {
+  async listAllUsers(ctx: Context<DbContextParameters, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
     return this._list(ctx, params);
   }
 
   @Method
-  private generateJWT(user: UserJWT) {
+  generateJWT(user: UserJWT) {
     const exp = new Date();
     exp.setDate(exp.getDate() + 60);
 
