@@ -247,4 +247,4 @@ const brokerConfig: BrokerOptions = {
   // }
 };
 
-export default brokerConfig;
+module.exports = brokerConfig;
