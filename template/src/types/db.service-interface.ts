@@ -79,7 +79,7 @@ export class MoleculerDBService<T, R> extends moleculer.Service<T> {
    * @param {any} origParams
    * @returns {Promise}
    */
-  sanitizeParams!: (ctx: Context, params?: DbContextParameters) => Promise<void>;
+  sanitizeParams!: (ctx: Context, params?: DbContextParameters) => Promise<any>;
 
   /**
    * Get entity(ies) by ID(s).
