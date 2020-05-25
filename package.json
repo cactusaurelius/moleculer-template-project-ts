@@ -5,7 +5,7 @@
   "main": "meta.js",
   "scripts": {
     "dev": "rimraf tmp && moleculer init . tmp",
-    "build": "npm run generate && npm run buid:tmp",
+    "build": "npm run generate && npm run build:tmp",
     "generate": "rimraf tmp && moleculer init --answers test/now.sh/answers.json --install . tmp",
     "build:tmp": "cd tmp && npm run build",
     "test": "moleculer init --answers test/ci/answers.json --install . ci-test",
