@@ -48,7 +48,7 @@ export const getActionConfig = {
 };
 
 export interface DBPagination<T> {
-  rows: T;
+  rows: T[];
   total: number;
   page: number;
   pageSize: number;

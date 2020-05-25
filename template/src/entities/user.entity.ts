@@ -58,20 +58,6 @@ export class UserEntity implements IUser {
   lastModifiedDate? = null;
 
   public getMongoEntity() {
-    return {
-      _id: this._id ? (this._id as any).toString() : null,
-      login: this.login,
-      password: this.password,
-      firstName: this.firstName,
-      lastName: this.lastName,
-      email: this.email,
-      langKey: this.langKey,
-      roles: this.roles,
-      activated: this.activated,
-      createdBy: this.createdBy,
-      createdDate: this.createdDate,
-      lastModifiedBy: this.lastModifiedBy || undefined,
-      lastModifiedDate: this.lastModifiedDate || undefined
-    };
+    return { ...this, _id: this._id && (this._id as Types.ObjectId).toString() };
   }
 }

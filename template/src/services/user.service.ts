@@ -86,7 +86,7 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
       });
       if (result && result._id) {
         const user = await this.getById(result._id.toString());
-        return this.transformDocuments<UserJWT>(ctx, {}, user);
+        return this.transformDocuments(ctx, {}, user);
       }
     } catch (e) {
       this.logger.error('Error resolving token', ctx.params.token, e);
@@ -107,13 +107,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     return !roles || !roles.length || roles.some((r) => userRoles.includes(r));
   }
 
-  // @Post('/login', {
-  //   name: 'login',
-  //   params: {
-  //     login: { type: 'string' },
-  //     password: { type: 'string', min: 1 }
-  //   }
-  // })
   @Action({
     name: 'login',
     params: {
@@ -142,7 +135,7 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
       ]);
     }
 
-    const user: UserJWT = await this.transformDocuments(ctx, {}, result);
+    const user = <UserJWT>await this.transformDocuments(ctx, {}, result);
     const token = this.generateJWT(user);
     // eslint-disable-next-line require-atomic-updates
     ctx.meta.$responseHeaders = { Authorization: `Bearer ${token}` };
@@ -224,7 +217,7 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
   async updateUser(ctx: Context<UserUpdateParams, UserAuthMeta>) {
     const { id } = ctx.params;
     delete ctx.params.id;
-    const user = await this.getById<IUser>(id);
+    const user = await this.getById(id);
     if (!user) {
       throw new moleculer.Errors.MoleculerClientError('User not found!', constants.HTTP_STATUS_NOT_FOUND);
     }

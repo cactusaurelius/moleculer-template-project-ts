@@ -248,3 +248,4 @@ const brokerConfig: BrokerOptions = {
 };
 
 module.exports = brokerConfig;
+export default brokerConfig;

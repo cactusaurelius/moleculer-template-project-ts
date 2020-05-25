@@ -1,6 +1,5 @@
 import { UserJWT, UserLang, UserRole } from '../../src/types';
 import request from 'supertest';
-import { Service } from 'moleculer';
 
 export const simpleUser: UserJWT = {
   _id: '5eb71bad0e58852bae1d10c3',

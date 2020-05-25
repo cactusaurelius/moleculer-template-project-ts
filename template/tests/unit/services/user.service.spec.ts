@@ -389,7 +389,7 @@ describe('Unit tests for User service', () => {
     });
     it('get all users', async () => {
       try {
-        const response = await service.getAllUsers(context);
+        const response = await service.listAllUsers(context);
         expect(response)
           .toBeDefined()
           .toBeObject()

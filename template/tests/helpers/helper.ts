@@ -1,4 +1,4 @@
-import { BrokerOptions, Service } from 'moleculer';
+import { BrokerOptions } from 'moleculer';
 import config from '../../moleculer.config';
 import request from 'supertest';
 import { constants } from 'http2';

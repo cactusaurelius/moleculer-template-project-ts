@@ -24,11 +24,6 @@ export class ProductEntity implements IProduct {
   price = 0;
 
   public getMongoEntity() {
-    return {
-      _id: this._id ? (this._id as any).toString() : null,
-      name: this.name,
-      quantity: this.quantity,
-      price: this.price
-    };
+    return { ...this, _id: this._id && (this._id as Types.ObjectId).toString() };
   }
 }
