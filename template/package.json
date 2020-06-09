@@ -15,7 +15,7 @@
     "build": "dotenv -e env/production.env -- run-s build:clean build:rollup",
     "generator": "yo ./generator/app/index.js",
     "-- TEST --": "-------------------------------------------------------------------------------------------------------",
-    "test": "jest -i --verbose --colors --detectOpenHandles --forceExit",
+    "test": "jest --colors --detectOpenHandles --forceExit",
     "test:watch": "yarn test --watch",
     "test:coverage": "yarn test --coverage",
     "test:send-coverages": "run-p coverage:codecovs coverage:coveralls coverage:codacy",
