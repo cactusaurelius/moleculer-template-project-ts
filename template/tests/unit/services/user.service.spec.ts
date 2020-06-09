@@ -1,6 +1,7 @@
 import moleculer, { Context, Endpoint, ServiceBroker } from 'moleculer';
 import TestingService from '../../../src/services/user.service';
 import {
+  IUser,
   IUserBase,
   UserAuthMeta,
   UserCreateParams,
@@ -19,40 +20,53 @@ import { adminUser, disabledUser, simpleUser, superAdminUser } from '../../helpe
 import { clearDB, randString, testConfig } from '../../helpers/helper';
 import { Config } from '../../../src/common';
 
+function calledCacheClean(mockFn: jest.SpyInstance) {
+  expect(mockFn)
+    .toHaveBeenCalled()
+    .toHaveBeenCalledTimes(1)
+    .toHaveBeenCalledWith(`cache.clean.${Config.DB_USER.dbname}.${Config.DB_USER.collection}`);
+}
+
 describe('Unit tests for User service', () => {
-  const broker = new ServiceBroker(testConfig);
-  const service = broker.createService(TestingService) as TestingService;
-  const endpoint: Endpoint = {
-    broker,
-    id: Math.random().toString(36).slice(2),
-    local: true,
-    node: {},
-    state: true
-  };
+  let broker: ServiceBroker;
+  let endpoint: Endpoint;
+  let service: TestingService;
+  const spyBroadcast = jest.spyOn(Context.prototype, 'broadcast');
+  // const spyCall = jest.spyOn(Context.prototype, 'call');
+  // Context.prototype.call = jest.fn();
   beforeEach(async () => {
+    broker = new ServiceBroker(testConfig);
+    endpoint = {
+      broker,
+      id: Math.random().toString(36).slice(2),
+      local: true,
+      node: {},
+      state: true
+    };
+    service = broker.createService(TestingService) as TestingService;
     await clearDB(Config.DB_USER);
     await broker.start();
     await broker.waitForServices(service.name);
+  });
+  afterEach(() => {
+    jest.clearAllMocks();
+    spyBroadcast.mockClear();
   });
   afterAll(async () => {
     await broker.stop();
     await clearDB(Config.DB_USER);
   });
 
-  function getJWT(user: UserJWT) {
-    return service.generateJWT(user);
-  }
-
-  const originalCall = Context.prototype.call;
-  beforeEach(() => {
-    Context.prototype.call = originalCall;
-  });
   beforeEach(() => expect.hasAssertions());
 
+  function getJWT(user: UserJWT) {
+    return service.generateJWT(user as IUser);
+  }
+
   describe('actions', () => {
-    let context: Context<UserTokenParams, {}>;
+    let context: Context<UserTokenParams, Record<string, unknown>>;
     beforeEach(() => {
-      context = new Context<UserTokenParams, {}>(broker, endpoint);
+      context = new Context<UserTokenParams, Record<string, unknown>>(broker, endpoint);
     });
     it('resolve token', async () => {
       context.params = { token: getJWT(simpleUser) };
@@ -81,10 +95,9 @@ describe('Unit tests for User service', () => {
     it('resolve not found user', async () => {
       context.params = { token: getJWT({ ...simpleUser, _id: '1234' }) };
       try {
-        const response = await service.resolveToken(context);
-        expect(response).toBeNull();
+        await service.resolveToken(context);
       } catch (err) {
-        fail(err);
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
     });
   });
@@ -148,7 +161,7 @@ describe('Unit tests for User service', () => {
         lastName: str,
         roles: [UserRole.USER],
         langKey: UserLang.ES,
-        activated: true
+        active: true
       };
       context = new Context<UserCreateParams, UserAuthMeta>(broker, endpoint);
     });
@@ -159,6 +172,7 @@ describe('Unit tests for User service', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(Error);
       }
+      expect(spyBroadcast).not.toHaveBeenCalled();
     });
     it('create user', async () => {
       context.params = { ...user, password: randString() };
@@ -175,30 +189,31 @@ describe('Unit tests for User service', () => {
       } catch (err) {
         fail(err);
       }
+      calledCacheClean(spyBroadcast);
     });
     it('create existing user login', async () => {
-      context.params = { ...user, password: randString() };
       context.meta = { user: superAdminUser };
-      await service.createUser(context);
-      // eslint-disable-next-line require-atomic-updates
-      context.params = { ...user, email: `${randString()}@test.net`, password: randString() };
+      const newUser = { ...simpleUser };
+      delete newUser._id;
+      context.params = { ...newUser, email: `${randString()}@test.net`, password: randString() };
       try {
         await service.createUser(context);
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
+      expect(spyBroadcast).not.toHaveBeenCalled();
     });
     it('create existing user email', async () => {
-      context.params = { ...user, password: randString() };
       context.meta = { user: superAdminUser };
-      await service.createUser(context);
-      // eslint-disable-next-line require-atomic-updates
-      context.params = { ...user, login: `other-login-${randString()}`, password: randString() };
+      const newUser = { ...simpleUser };
+      delete newUser._id;
+      context.params = { ...newUser, login: `other-login-${randString()}`, password: randString() };
       try {
         await service.createUser(context);
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
+      expect(spyBroadcast).not.toHaveBeenCalled();
     });
   });
 
@@ -238,10 +253,11 @@ describe('Unit tests for User service', () => {
         expect(response)
           .toBeDefined()
           .toBeObject()
-          .toContainEntries([
-            ['login', simpleUser.login],
-            ['email', simpleUser.email]
-          ]);
+          .toContainEntry(['token', expect.any(String)]);
+        // .toContainEntries([
+        //   ['login', simpleUser.login],
+        //   ['email', simpleUser.email]
+        // ]);
       } catch (err) {
         fail(err);
       }
@@ -249,9 +265,9 @@ describe('Unit tests for User service', () => {
   });
 
   describe('get me', () => {
-    let context: Context<{}, UserAuthMeta>;
+    let context: Context<Record<string, unknown>, UserAuthMeta>;
     beforeEach(() => {
-      context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context = new Context<Record<string, unknown>, UserAuthMeta>(broker, endpoint);
       context.action = { name: 'user.get' };
     });
     it('not found', async () => {
@@ -328,6 +344,7 @@ describe('Unit tests for User service', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
+      expect(spyBroadcast).not.toHaveBeenCalled();
     });
     it('update', async () => {
       const firstName = 'changed';
@@ -351,14 +368,17 @@ describe('Unit tests for User service', () => {
       } catch (err) {
         fail(err);
       }
+      calledCacheClean(spyBroadcast);
     });
   });
 
   describe('delete user', () => {
     let context: Context<UserDeleteParams, UserAuthMeta>;
+    let mockServiceBroadcast: jest.SpyInstance;
     beforeEach(() => {
       context = new Context<UserDeleteParams, UserAuthMeta>(broker, endpoint);
       context.action = { name: 'user.remove' };
+      mockServiceBroadcast = jest.spyOn(service.broker, 'emit');
     });
     it('not found', async () => {
       context.meta = { user: superAdminUser };
@@ -368,23 +388,36 @@ describe('Unit tests for User service', () => {
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
+      expect(spyBroadcast).not.toHaveBeenCalled();
     });
     it('delete', async () => {
       context.meta = { user: superAdminUser };
       context.params = { id: adminUser._id };
       await service.deleteUser(context);
+      calledCacheClean(spyBroadcast);
+      expect(mockServiceBroadcast).toHaveBeenCalled().toHaveBeenCalledTimes(1).toHaveBeenCalledWith('user.deleted', { id: adminUser._id });
       try {
         await broker.call('user.get.id', { id: adminUser._id });
       } catch (err) {
         expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
       }
     });
+    it('delete itself', async () => {
+      context.meta = { user: superAdminUser };
+      context.params = { id: superAdminUser._id };
+      try {
+        await service.deleteUser(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+      expect(spyBroadcast).not.toHaveBeenCalled();
+    });
   });
 
   describe('list users', () => {
-    let context: Context<{}, UserAuthMeta>;
+    let context: Context<Record<string, unknown>, UserAuthMeta>;
     beforeEach(() => {
-      context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context = new Context<Record<string, unknown>, UserAuthMeta>(broker, endpoint);
       context.action = { name: 'user.list' };
     });
     it('get all users', async () => {

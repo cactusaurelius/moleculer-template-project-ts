@@ -1,5 +1,5 @@
-import { Service, ServiceBroker } from 'moleculer';
-import { AUTHORIZATION_KEY, checkWrongToken, clearDB, randString, testConfig, wait } from '../../helpers/helper';
+import { ServiceBroker } from 'moleculer';
+import { AUTHORIZATION_KEY, checkWrongToken, clearDB, getServer, randString, testConfig, wait } from '../../helpers/helper';
 import request from 'supertest';
 import TestingService from '../../../src/services/user.service';
 import ApiService from '../../../src/services/api.service';
@@ -18,33 +18,17 @@ async function loginTest(server: string, info: { user: UserJWT; password: string
   expect(response.body)
     .toBeDefined()
     .toBeObject()
-    .toContainEntries([
-      ['login', user.login],
-      ['email', user.email],
-      ['firstName', user.firstName],
-      ['lastName', user.lastName]
-    ]);
+    .toContainEntry(['token', expect.any(String)]);
   expect(response.header).toBeDefined().toContainKey(AUTHORIZATION_KEY.toLowerCase());
   expect(response.header.authorization).toBeDefined().toStartWith('Bearer ');
 }
 
 const broker = new ServiceBroker(testConfig);
-const userService = broker.createService(TestingService);
+const testingService = broker.createService(TestingService);
 const apiService = broker.createService(ApiService);
 
-function getServer(server: Service) {
-  return new Promise<string>((resolve) => {
-    const interval = setInterval(() => {
-      const addr = server.address();
-      if (addr) {
-        clearInterval(interval);
-        resolve(`http://${addr.address}:${addr.port}`);
-      }
-    }, 10);
-  });
-}
-
 describe('Integration tests for Users service', () => {
+  let firstStart = true;
   let server: string;
   let testUrl = '';
   let token = '';
@@ -54,10 +38,14 @@ describe('Integration tests for Users service', () => {
     if (!broker.started) {
       await broker.start();
     }
-    await broker.waitForServices(userService.name);
+    await broker.waitForServices(testingService.name);
     await broker.waitForServices(apiService.name);
     server = await getServer(apiService.server);
-    await wait(0);
+    if (firstStart) {
+      await wait(1);
+      // eslint-disable-next-line require-atomic-updates
+      firstStart = false;
+    }
   });
 
   afterEach(async () => {
@@ -115,7 +103,7 @@ describe('Integration tests for Users service', () => {
         .toBeObject()
         .toContainEntries([
           ['field', 'disabled'],
-          ['message', 'user disabled']
+          ['message', 'user not active']
         ]);
     });
     it('good login', async () => {
@@ -152,7 +140,7 @@ describe('Integration tests for Users service', () => {
     it('wrong token', async () => {
       await checkWrongToken(server, testUrl);
     });
-    it('info', async () => {
+    it('list', async () => {
       const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, token);
       expect(response.status).toBe(constants.HTTP_STATUS_OK);
       expect(response.body)
@@ -164,7 +152,7 @@ describe('Integration tests for Users service', () => {
           ['totalPages', 1]
         ]);
     });
-    it('info with admin', async () => {
+    it('list with admin', async () => {
       const adminToken = await getJWT(server, adminUser.login);
       await checkWrongToken(server, testUrl, { token: adminToken });
     });
@@ -205,7 +193,7 @@ describe('Integration tests for Users service', () => {
       email: `test-${randString()}@test.com`,
       roles: [UserRole.USER],
       langKey: UserLang.ES,
-      activated: true
+      active: true
     };
     beforeEach(async () => {
       testUrl = '/api/user';
@@ -294,6 +282,10 @@ describe('Integration tests for Users service', () => {
     it('delete with admin', async () => {
       const adminToken = await getJWT(server, adminUser.login);
       await checkWrongToken(server, testUrl, { token: adminToken, method: 'delete' });
+    });
+    it('delete itself', async () => {
+      const response = await request(server).delete(`/api/user/${superAdminUser._id}`).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_UNPROCESSABLE_ENTITY);
     });
   });
 });
