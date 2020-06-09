@@ -27,7 +27,7 @@ import { RequestMessage, UserAuthMeta, UserJWT, UserRole, UserRolesParams, UserT
         preflightContinue: false,
         optionsSuccessStatus: 204,
         allowedHeaders: '*',
-        //exposedHeaders: "*",
+        exposedHeaders: '*',
         credentials: true,
         maxAge: undefined
         // allowedHeaders: ['Content-Type', 'Authorization'],
@@ -38,8 +38,8 @@ import { RequestMessage, UserAuthMeta, UserJWT, UserRole, UserRolesParams, UserT
     ],
 
     rateLimit: {
-      window: 10 * 1000,
-      limit: 10,
+      window: Config.RATE_LIMIT_WINDOW,
+      limit: Config.RATE_LIMIT,
       headers: true
     },
 

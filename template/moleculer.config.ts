@@ -55,7 +55,7 @@ const brokerConfig: BrokerOptions = {
   },
   // Default log level for built-in console logger. It can be overwritten in logger options above.
   // Available values: trace, debug, info, warn, error, fatal
-  logLevel: 'info',
+  logLevel: Config.LOGLEVEL,
 
   // Define transporter.
   // More info: https://moleculer.services/docs/0.14/networking.html
@@ -70,7 +70,7 @@ const brokerConfig: BrokerOptions = {
   // Define a serializer.
   // Available values: "JSON", "Avro", "ProtoBuf", "MsgPack", "Notepack", "Thrift".
   // More info: https://moleculer.services/docs/0.14/networking.html#Serialization
-  serializer: 'JSON',
+  serializer: Config.SERIALIZER,
 
   // Number of milliseconds to wait before reject a request with a RequestTimeout error. Disabled: 0
   requestTimeout: Config.REQUEST_TIMEOUT,
@@ -115,6 +115,8 @@ const brokerConfig: BrokerOptions = {
 
   // Settings of Service Registry. More info: https://moleculer.services/docs/0.14/registry.html
   registry: {
+    // https://moleculer.services/docs/0.14/registry.html
+    discoverer: 'Local',
     // Define balancing strategy. More info: https://moleculer.services/docs/0.14/balancing.html
     // Available values: "RoundRobin", "Random", "CpuUsage", "Latency", "Shard"
     strategy: Config.STRATEGY,
@@ -185,17 +187,17 @@ const brokerConfig: BrokerOptions = {
 
   // Enable/disable built-in metrics function. More info: https://moleculer.services/docs/0.14/metrics.html
   metrics: {
-    enabled: {{#if metrics}}true{{/if}}{{#unless metrics}}false{{/unless}},
+    enabled: Config.METRICS_ENABLED,
     // Available built-in reporters: "Console", "CSV", "Event", "Prometheus", "Datadog", "StatsD"
-    reporter: {
-      type: 'Prometheus',
-      options: {
+      reporter: {
+      type: Config.METRICS_TYPE,
+        options: {
         // HTTP port
-        port: 3030,
-        // HTTP URL path
-        path: '/metrics',
-        // Default labels which are appended to all metrics labels
-        defaultLabels: (registry: any) => ({
+        port: Config.METRICS_PORT,
+          // HTTP URL path
+          path: Config.METRICS_PATH,
+          // Default labels which are appended to all metrics labels
+          defaultLabels: (registry: any) => ({
           namespace: registry.broker.namespace,
           nodeID: registry.broker.nodeID
         })
@@ -205,19 +207,20 @@ const brokerConfig: BrokerOptions = {
 
   // Enable built-in tracing function. More info: https://moleculer.services/docs/0.14/tracing.html
   tracing: {
-    enabled: {{#if tracing}}true{{/if}}{{#unless tracing}}false{{/unless}},
-    // Available built-in exporters: "Console", "Datadog", "Event", "EventLegacy", "Jaeger", "Zipkin"
-    exporter: {
-      type: 'Console', // Console exporter is only for development!
-      options: {
-        // Custom logger
-        logger: null,
-        // Using colors
-        colors: true,
-        // Width of row
-        width: 100,
-        // Gauge width in the row
-        gaugeWidth: 40
+    enabled: Config.TRACING_ENABLED,
+      // Available built-in exporters: "Console", "Datadog", "Event", "EventLegacy", "Jaeger", "Zipkin"
+      exporter: {
+      type: Config.TRACING_TYPE, // Console exporter is only for development!
+        options: {
+        baseURL: Config.TRACING_ZIPKIN_URL,
+          // Custom logger
+          logger: null,
+          // Using colors
+          colors: true,
+          // Width of row
+          width: 100,
+          // Gauge width in the row
+          gaugeWidth: 40
       }
     }
   },
