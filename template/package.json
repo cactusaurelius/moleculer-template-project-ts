@@ -88,7 +88,7 @@
     "@commitlint/config-conventional": "^8.3.4",
     "@rollup/plugin-commonjs": "^13.0.0",
     "@rollup/plugin-json": "^4.1.0",
-    "@rollup/plugin-node-resolve": "^8.0.01,
+    "@rollup/plugin-node-resolve": "^8.0.1",
     "@rollup/plugin-typescript": "^4.1.2",
     "@types/bcryptjs": "^2.4.2",
     "@types/cookie-parser": "^1.4.2",
@@ -102,7 +102,7 @@
     "mongodb": "3.5.8",
     {{/userService}}
     "@types/mkdirp": "^1.0.1",
-    "@types/node": "^14.0.12",
+    "@types/node": "^14.0.13",
     "@types/rimraf": "^3.0.0",
     "@types/supertest": "^2.0.9",
     "builtin-modules": "^3.1.0",
