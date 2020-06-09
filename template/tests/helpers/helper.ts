@@ -1,4 +1,4 @@
-import { BrokerOptions } from 'moleculer';
+import { BrokerOptions, Service } from 'moleculer';
 import config from '../../moleculer.config';
 import request from 'supertest';
 import { constants } from 'http2';
@@ -46,13 +46,19 @@ export function wait(secs: number) {
 
 interface CheckWrongInfo {
   token?: string;
-  method?: 'get' | 'post' | 'put' | 'delete';
-  body?: string | object;
+  method?: 'get' | 'post' | 'put' | 'patch' | 'delete';
+  body?: string | any;
+  attach?: string;
 }
 
 export async function checkWrongToken(server: string, infoUrl: string, info: CheckWrongInfo = {}) {
-  const { token = 'Bearer WrongToken', method = 'get', body = undefined } = info;
-  const response = await request(server)[method](infoUrl).send(body).set('Authorization', token);
+  const { token = 'Bearer WrongToken', method = 'get', body = undefined, attach = undefined } = info;
+  let response: request.Response;
+  if (attach) {
+    response = await request(server)[method](infoUrl).send(body).attach('file', attach).set(AUTHORIZATION_KEY, token);
+  } else {
+    response = await request(server)[method](infoUrl).send(body).set(AUTHORIZATION_KEY, token);
+  }
   expect(response.status).toBe(constants.HTTP_STATUS_UNAUTHORIZED);
   expect(response.body)
     .toBeDefined()
@@ -65,3 +71,15 @@ export async function checkWrongToken(server: string, infoUrl: string, info: Che
 }
 
 export const AUTHORIZATION_KEY = 'Authorization';
+
+export function getServer(server: Service) {
+  return new Promise<string>((resolve) => {
+    const interval = setInterval(() => {
+      const addr = server.address();
+      if (addr) {
+        clearInterval(interval);
+        resolve(`http://${addr.address}:${addr.port}`);
+      }
+    }, 100);
+  });
+}

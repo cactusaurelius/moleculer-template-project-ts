@@ -176,7 +176,6 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     const token = this.generateJWT(user);
     // eslint-disable-next-line require-atomic-updates
     ctx.meta.$responseHeaders = { Authorization: `Bearer ${token}` };
-    await ctx.emit<LogCreateParams>(auditEvent, { user: user._id!.toString(), isError: false, action: LogAction.AUTHENTICATION_SUCCESS });
     return { token };
   }
 

@@ -5,11 +5,11 @@
   "main": "meta.js",
   "scripts": {
     "dev": "rimraf tmp && moleculer init . tmp",
-    "build": "npm run generate && npm run build:tmp",
+    "build": "yarn generate && yarn build:tmp",
     "generate": "rimraf tmp && moleculer init --answers test/now.sh/answers.json --install . tmp",
-    "build:tmp": "cd tmp && npm run build",
+    "build:tmp": "cd tmp && yarn build",
     "test": "moleculer init --answers test/ci/answers.json --install . ci-test",
-    "start": "cd tmp && npm run start:dev",
+    "start": "cd tmp && yarn start:dev",
     "deploy": "vercel"
   },
   "repository": {
