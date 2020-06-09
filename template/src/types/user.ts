@@ -1,11 +1,13 @@
 import { Options } from '@d0whc3r/moleculer-decorators';
 import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
 import { ApiGatewayMeta } from './interfaces';
+import { IUser } from '../entities';
 
 export interface UserServiceSettingsOptions extends DbServiceSettings {
   rest: '/user';
   JWT_SECRET: string;
-  fields: (keyof Required<UserJWT>)[];
+  fields: (keyof Required<IUser>)[];
+  populates?: any;
 }
 
 export interface UsersServiceOptions extends Options {
@@ -36,7 +38,7 @@ export interface IUserBase {
   email: string;
   langKey?: UserLang;
   roles: UserRole[];
-  activated?: boolean;
+  active?: boolean;
 }
 
 export interface UserJWT extends IUserBase {
@@ -61,7 +63,7 @@ export interface UserRolesParams {
   roles: UserRole[];
 }
 
-export interface UserUpdateParams extends Partial<IUserBase> {
+export interface UserUpdateParams extends Partial<IUser> {
   id: string;
   password?: string;
 }
@@ -79,4 +81,12 @@ export interface UserAuthMeta extends ApiGatewayMeta {
   user: UserJWT;
 }
 
-export interface UserLoginMeta extends ApiGatewayMeta {}
+export type UserLoginMeta = ApiGatewayMeta;
+
+export enum UserEvent {
+  DELETED = 'user.deleted'
+}
+
+export interface UserEventDeletedParams {
+  id: string;
+}

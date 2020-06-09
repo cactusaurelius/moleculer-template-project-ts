@@ -1,0 +1,112 @@
+import { db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin } from '../mixins';
+import {
+  <%= canonicalName %>CreateParams,
+  <%= canonicalName %>DeleteParams,
+  <%= canonicalName %>GetParams,
+  <%= canonicalName %>ServiceOptions,
+  <%= canonicalName %>ServiceSettingsOptions,
+  <%= canonicalName %>UpdateParams,
+  getActionConfig,
+  I<%= canonicalName %>,
+  listActionConfig,
+  MoleculerDBService,
+  RestOptions,
+  UserAuthMeta,
+  UserRole
+} from '../types';
+import moleculer, { ActionParams, Context } from 'moleculer';
+import { DbContextParameters } from 'moleculer-db';
+import { constants } from 'http2';
+import { JsonConvert } from 'json2typescript';
+import { <%= canonicalName %>Entity } from '../entities';
+import { <%= canonicalLower %>ErrorCode, <%= canonicalLower %>ErrorMessage } from '../types/errors';
+import { Delete, Get, Post, Put, Service } from '@d0whc3r/moleculer-decorators';
+
+const validate<%= canonicalName %>Base: ActionParams = {
+};
+
+const validate<%= canonicalName %>BaseOptional: ActionParams = {
+};
+
+@Service<<%= canonicalName %>ServiceOptions>({
+  name: '<%= canonicalLower %>',
+  mixins: [db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin],
+  settings: {
+    idField: '_id',
+    pageSize: 10,
+    rest: '/<%= canonicalLower %>',
+    fields: ['_id'],
+    entityValidator: {
+    }
+  }
+})
+export default class <%= canonicalName %>Service extends MoleculerDBService<<%= canonicalName %>ServiceSettingsOptions, I<%= canonicalName %>> {
+  @Post<RestOptions>('/', {
+    name: 'create',
+    roles: UserRole.SUPERADMIN,
+    params: { ...validate<%= canonicalName %>Base }
+  })
+  async create<%= canonicalName %>(ctx: Context<<%= canonicalName %>CreateParams, UserAuthMeta>) {
+    const entity = ctx.params;
+    const parsedEntity = new JsonConvert().deserializeObject(entity, <%= canonicalName %>Entity).getMongoEntity();
+    return this._create(ctx, parsedEntity);
+    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
+  }
+
+  @Get<RestOptions>('/', {
+    name: 'list',
+    ...listActionConfig
+  })
+  async list<%= canonicalName %>s(ctx: Context<DbContextParameters, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._list(ctx, params);
+    // return this._list(ctx, { ...params, populate: [''] });
+  }
+
+  @Get<RestOptions>('/:id', {
+    name: 'get',
+    ...getActionConfig
+  })
+  async get<%= canonicalName %>(ctx: Context<<%= canonicalName %>GetParams, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._get(ctx, params);
+    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
+  }
+
+  @Put<RestOptions>('/:id', {
+    name: 'update',
+    roles: UserRole.SUPERADMIN,
+    params: {
+      ...validate<%= canonicalName %>BaseOptional,
+      id: 'string'
+    }
+  })
+  async update<%= canonicalName %>(ctx: Context<<%= canonicalName %>UpdateParams, UserAuthMeta>) {
+    const { id } = ctx.params;
+    delete ctx.params.id;
+    const <%= canonicalLower %> = await this.getById(id);
+    if (!<%= canonicalLower %>) {
+      throw new moleculer.Errors.MoleculerClientError(<%= canonicalLower %>ErrorMessage.NOT_FOUND, <%= canonicalLower %>ErrorCode.NOT_FOUND);
+    }
+    const new<%= canonicalName %> = {
+      ...<%= canonicalLower %>,
+      ...ctx.params,
+      _id: id
+    };
+    return this._update(ctx, new<%= canonicalName %>);
+    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
+  }
+
+  @Delete<RestOptions>('/:id', {
+    name: 'remove',
+    roles: UserRole.SUPERADMIN,
+    params: { id: 'string' }
+  })
+  async delete<%= canonicalName %>(ctx: Context<<%= canonicalName %>DeleteParams, UserAuthMeta>) {
+    // TODO: Broadcast to delete in all related services
+    const params = this.sanitizeParams(ctx, ctx.params);
+    await this._remove(ctx, params);
+    // eslint-disable-next-line require-atomic-updates
+    ctx.meta.$statusCode = constants.HTTP_STATUS_ACCEPTED;
+  }
+}

@@ -1,0 +1,32 @@
+import { Options } from '@d0whc3r/moleculer-decorators';
+import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
+import { I<%= canonicalName %> } from '../entities';
+
+export interface <%= canonicalName %>ServiceSettingsOptions extends DbServiceSettings {
+  rest: '/<%= serviceName %>';
+  fields: (keyof Required<I<%= canonicalName %>>)[];
+  populates?: any;
+}
+
+export interface <%= canonicalName %>ServiceOptions extends Options {
+  name: '<%= serviceName %>';
+  settings: <%= canonicalName %>ServiceSettingsOptions;
+}
+
+export interface I<%= canonicalName %>Base {
+
+}
+
+export interface <%= canonicalName %>CreateParams extends I<%= canonicalName %>Base {}
+
+export interface <%= canonicalName %>UpdateParams extends Partial<I<%= canonicalName %>Base> {
+  id: string;
+}
+
+export interface <%= canonicalName %>GetParams extends DbContextParameters {
+  id: string;
+}
+
+export interface <%= canonicalName %>DeleteParams {
+  id: string;
+}

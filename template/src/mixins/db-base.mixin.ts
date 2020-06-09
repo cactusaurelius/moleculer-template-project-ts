@@ -6,10 +6,11 @@ import { Context, ServiceSchema } from 'moleculer';
 import AdapterMongo from 'moleculer-db-adapter-mongoose';
 import { Config } from '../common';
 import { DBInfo } from '../types';
+import { Model } from 'mongoose';
 
 export interface BaseMixinConfig {
   name: string;
-  model: any;
+  model: Model<any>;
   collection: string;
   dbInfo: DBInfo;
 }
@@ -18,7 +19,7 @@ export class DbBaseMixin {
   public cacheCleanEventName: string;
   private readonly mixName: string;
   private readonly collection: string;
-  private readonly mixModel: any;
+  private readonly mixModel: Model<any>;
   private readonly dbInfo: DBInfo;
 
   constructor(info: BaseMixinConfig) {
@@ -47,7 +48,7 @@ export class DbBaseMixin {
         if (Config.IS_TEST) {
           return this.getLocalAdapter(schema);
         }
-        throw new Error('Unknown adapter in DB_TYPE: ' + this.dbInfo.dialect);
+        throw new Error(`Unknown adapter in DB_TYPE: ${this.dbInfo.dialect}`);
       }
     }
   }
@@ -107,7 +108,7 @@ export class DbBaseMixin {
         if (seedDBFunction) {
           const count = await this.adapter.count();
           if (!count) {
-            this.logger.info(`The '${this.table}' collection is empty. Seeding the collection...`);
+            this.logger.info(`The collection for '${this.name}' is empty. Seeding the collection...`);
             await seedDBFunction(this.adapter);
             this.logger.info('Seeding is done. Number of records:', await this.adapter.count());
           }

@@ -2,9 +2,12 @@ import { ActionSchema, ActionParamSchema } from 'moleculer';
 import { IncomingMessage } from 'http';
 import { ActionOptions } from '@d0whc3r/moleculer-decorators';
 import { UserRole } from './user';
-import { Schema, SchemaType, SchemaTypeOpts } from 'mongoose';
+import { Schema, SchemaType, SchemaTypeOpts, Types } from 'mongoose';
 
 export type definitionType<T> = (collection?: string) => Record<keyof Required<T>, SchemaTypeOpts<any> | Schema | SchemaType>;
+
+export type ObjectId = Types.ObjectId | string;
+export type ObjectIdNull = ObjectId | null;
 
 export type DBDialog = 'local' | 'file' | 'mongodb';
 

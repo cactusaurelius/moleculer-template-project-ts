@@ -16,7 +16,10 @@ export const listActionConfig = {
     ],
     page: { type: 'number', integer: true, min: 1, optional: true, convert: true },
     pageSize: { type: 'number', integer: true, min: 0, optional: true, convert: true },
-    sort: { type: 'string', optional: true },
+    sort: [
+      { type: 'string', optional: true },
+      { type: 'array', optional: true, items: 'string' }
+    ],
     search: { type: 'string', optional: true },
     searchFields: [
       { type: 'string', optional: true },

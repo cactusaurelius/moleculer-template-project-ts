@@ -1,0 +1,193 @@
+import { ServiceBroker } from 'moleculer';
+import { AUTHORIZATION_KEY, checkWrongToken, clearDB, getServer, testConfig, wait } from '../../helpers/helper';
+import UserService from '../../../src/services/user.service';
+import TestingService from '../../../src/services/<%= canonicalLower %>.service';
+import ApiService from '../../../src/services/api.service';
+import { Config } from '../../../src/common';
+import request from 'supertest';
+import { constants } from 'http2';
+import { adminUser, getJWT, simpleUser } from '../../helpers/user.helper';
+import { <%= canonicalLower %>1, <%= canonicalLower %>2 } from '../../helpers/<%= canonicalLower %>.helper';
+import { I<%= canonicalName %> } from '../../../src/entities';
+import { <%= canonicalLower %>ErrorCode } from '../../../src/types/errors';
+
+const broker = new ServiceBroker(testConfig);
+const testingService = broker.createService(TestingService);
+const userService = broker.createService(UserService);
+const apiService = broker.createService(ApiService);
+
+describe('Integration tests for <%= canonicalName %> service', () => {
+  let firstStart = true;
+  let server: string;
+  let testUrl = '';
+  let token = '';
+
+  beforeEach(async () => {
+    await clearDB(Config.DB_USER);
+    if (!broker.started) {
+      await broker.start();
+    }
+    await broker.waitForServices(testingService.name);
+    await broker.waitForServices(userService.name);
+    await broker.waitForServices(apiService.name);
+    server = await getServer(apiService.server);
+    if (firstStart) {
+      await wait(1);
+      // eslint-disable-next-line require-atomic-updates
+      firstStart = false;
+    }
+  });
+
+  afterEach(async () => {
+    await broker.stop();
+    await clearDB(Config.DB_USER);
+  });
+  beforeEach(() => expect.hasAssertions());
+
+  describe('Create <%= canonicalLower %>', () => {
+    const new<%= canonicalName %>: <%= canonicalName %>CreateParams = {
+    };
+    beforeEach(async () => {
+      testUrl = '/api/<%= canonicalLower %>';
+      token = await getJWT(server);
+    });
+    it('wrong token', async () => {
+      await checkWrongToken(server, testUrl, { method: 'post', body: new<%= canonicalName %> });
+    });
+    it('create', async () => {
+      const response = await request(server).post(testUrl).send(new<%= canonicalName %>).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_OK);
+      expect(response.body).toBeDefined().toBeObject().toContainEntry(['name', new<%= canonicalName %>.name]);
+    });
+    it('create with admin', async () => {
+      const adminToken = await getJWT(server, adminUser.login);
+      await checkWrongToken(server, testUrl, { token: adminToken, method: 'post', body: new<%= canonicalName %> });
+    });
+    it('duplicated <%= canonicalLower %>', async () => {
+      const response = await request(server).post(testUrl).send(<%= canonicalLower %>1).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(<%= canonicalLower %>ErrorCode.DUPLICATED);
+    });
+  });
+
+  describe('List <%= canonicalLower %>s', () => {
+    beforeEach(async () => {
+      testUrl = '/api/<%= canonicalLower %>/list';
+      token = await getJWT(server);
+    });
+    it('wrong token', async () => {
+      await checkWrongToken(server, testUrl);
+    });
+    it('list', async () => {
+      const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_OK);
+      expect(response.body)
+        .toBeDefined()
+        .toBeObject()
+        .toContainEntries([
+          ['page', 1],
+          ['pageSize', 10],
+          ['totalPages', 1]
+        ]);
+    });
+    it('list with admin', async () => {
+      const adminToken = await getJWT(server, adminUser.login);
+      await checkWrongToken(server, testUrl, { token: adminToken });
+    });
+  });
+
+  describe('Get <%= canonicalLower %> by id', () => {
+    beforeEach(async () => {
+      testUrl = `/api/<%= canonicalLower %>/${<%= canonicalLower %>1._id}`;
+      token = await getJWT(server);
+    });
+    it('wrong token', async () => {
+      await checkWrongToken(server, testUrl);
+    });
+    it('get id', async () => {
+      const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_OK);
+      expect(response.body)
+        .toBeDefined()
+        .toBeObject()
+        .toContainEntries([
+          ['_id', <%= canonicalLower %>1._id]
+        ]);
+    });
+    it('get with user', async () => {
+      const userToken = await getJWT(server, simpleUser.login);
+      const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, userToken);
+      expect(response.status).toBe(constants.HTTP_STATUS_OK);
+      expect(response.body)
+        .toBeDefined()
+        .toBeObject()
+        .toContainEntries([
+          ['_id', <%= canonicalLower %>1._id]
+        ]);
+    });
+    it('get wrong id', async () => {
+      testUrl = '/api/<%= canonicalLower %>/xxx';
+      const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_NOT_FOUND);
+    });
+    it('get with user not own <%= canonicalLower %>', async () => {
+      const userToken = await getJWT(server, simpleUser.login);
+      testUrl = `/api/<%= canonicalLower %>/${<%= canonicalLower %>2._id}`;
+      const response = await request(server).get(testUrl).set(AUTHORIZATION_KEY, userToken);
+      expect(response.status).toBe(constants.HTTP_STATUS_NOT_FOUND);
+    });
+  });
+
+  describe('Update <%= canonicalLower %> by id', () => {
+    const updated<%= canonicalName %>: Partial<I<%= canonicalName %>> = {
+    };
+    beforeEach(async () => {
+      testUrl = `/api/<%= canonicalLower %>/${<%= canonicalLower %>1._id}`;
+      token = await getJWT(server);
+    });
+    it('wrong token', async () => {
+      await checkWrongToken(server, testUrl, { method: 'put', body: updated<%= canonicalName %> });
+    });
+    it('update', async () => {
+      const response = await request(server).put(testUrl).send(updated<%= canonicalName %>).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_OK);
+      expect(response.body)
+        .toBeDefined()
+        .toBeObject()
+        .toContainEntries([
+          ['_id', <%= canonicalLower %>1._id]
+        ]);
+    });
+    it('update with admin', async () => {
+      const userToken = await getJWT(server, adminUser.login);
+      await checkWrongToken(server, testUrl, { token: userToken, method: 'put', body: updated<%= canonicalName %> });
+    });
+    it('update wrong id', async () => {
+      testUrl = '/api/<%= canonicalLower %>/xxx';
+      const response = await request(server).put(testUrl).send(updated<%= canonicalName %>).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_NOT_FOUND);
+    });
+  });
+
+  describe('Delete <%= canonicalLower %> by id', () => {
+    beforeEach(async () => {
+      testUrl = `/api/<%= canonicalLower %>/${<%= canonicalLower %>1._id}`;
+      token = await getJWT(server);
+    });
+    it('wrong token', async () => {
+      await checkWrongToken(server, testUrl, { method: 'delete' });
+    });
+    it('delete', async () => {
+      const response = await request(server).delete(testUrl).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_ACCEPTED);
+    });
+    it('delete with admin', async () => {
+      const userToken = await getJWT(server, adminUser.login);
+      await checkWrongToken(server, testUrl, { token: userToken, method: 'delete' });
+    });
+    it('delete wrong id', async () => {
+      testUrl = '/api/<%= canonicalLower %>/xxx';
+      const response = await request(server).delete(testUrl).set(AUTHORIZATION_KEY, token);
+      expect(response.status).toBe(constants.HTTP_STATUS_NOT_FOUND);
+    });
+  });
+});

@@ -1,0 +1,11 @@
+import { model, models, Schema, Types } from 'mongoose';
+import { definitionType, I<%= canonicalName %> } from '../types';
+
+const definition: definitionType<I<%= canonicalName %>> = (collection?: string) => ({
+  _id: Types.ObjectId
+});
+
+export const <%= canonicalLower %>MongoModel = (collection: string) => {
+  const schema = new Schema<I<%= canonicalName %>>(definition(collection), { autoIndex: true });
+  return models[collection] || model(collection, schema);
+};

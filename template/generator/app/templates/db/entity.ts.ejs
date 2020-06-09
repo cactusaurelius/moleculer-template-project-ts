@@ -1,0 +1,21 @@
+import { JsonObject, JsonProperty } from 'json2typescript';
+import { Types } from 'mongoose';
+import { Config } from '../common';
+import { I<%= canonicalName %>Base, ObjectIdNull } from '../types';
+
+export interface I<%= canonicalName %> extends I<%= canonicalName %>Base {
+  _id: ObjectIdNull;
+}
+
+@JsonObject('<%= canonicalName %>')
+export class <%= canonicalName %>Entity implements I<%= canonicalName %> {
+  @JsonProperty('_id', String, true)
+  _id = Config.DB_<%= uppercaseName %>.dialect === 'local' ? Types.ObjectId() : null;
+
+  public getMongoEntity() {
+    const result: I<%= canonicalName %> = { ...this, _id: this._id && (this._id as Types.ObjectId).toString() };
+    if (!result._id) {      delete result._id;
+    }
+    return result;
+  }
+}

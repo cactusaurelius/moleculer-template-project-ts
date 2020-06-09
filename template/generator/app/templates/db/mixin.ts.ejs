@@ -1,0 +1,17 @@
+import { DbBaseMixin } from './db-base.mixin';
+import { <%= canonicalLower %>MongoModel } from '../models';
+import { Config } from '../common';
+import { dbSeed } from './helpers.mixin';
+import { <%= canonicalName %>Entity } from '../entities';
+
+const dbInfo = Config.DB_<%= uppercaseName %>;
+
+const dbBaseMixin = new DbBaseMixin({
+  dbInfo,
+  name: 'db<%= canonicalName %>Mixin',
+  collection: dbInfo.collection,
+  model: <%= canonicalLower %>MongoModel(dbInfo.collection)
+});
+
+export const db<%= canonicalName %>Mixin = dbBaseMixin.getMixin(dbSeed(dbInfo, <%= canonicalName %>Entity));
+export const events<%= canonicalName %>Mixin = dbBaseMixin.getEvents([dbBaseMixin.cacheCleanEventName]);

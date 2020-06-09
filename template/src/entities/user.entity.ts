@@ -1,18 +1,17 @@
-import { JsonObject, JsonProperty } from 'json2typescript';
+import { Any, JsonObject, JsonProperty } from 'json2typescript';
 import { Types } from 'mongoose';
-import { IUserBase, UserLang, UserRole } from '../types';
+import { IUserBase, ObjectId, ObjectIdNull, UserLang, UserRole } from '../types';
 import { DateConverter } from './converters/date.converter';
 import { UserRoleConverter } from './converters/user/user-role.converter';
 import { UserLangConverter } from './converters/user/user-lang.converter';
 import { Config } from '../common';
 
 export interface IUser extends IUserBase {
-  _id: Types.ObjectId | string | null;
+  _id: ObjectIdNull;
   password: string;
-  activated?: boolean;
-  createdBy: Types.ObjectId | string;
+  createdBy: ObjectId;
   createdDate: Date | null;
-  lastModifiedBy?: Types.ObjectId | string | null;
+  lastModifiedBy?: ObjectIdNull;
   lastModifiedDate?: Date | null;
 }
 
@@ -24,7 +23,7 @@ export class UserEntity implements IUser {
   @JsonProperty('login', String)
   login = '';
 
-  @JsonProperty('password', String)
+  @JsonProperty('password', String, true)
   password = '';
 
   @JsonProperty('firstName', String)
@@ -42,22 +41,26 @@ export class UserEntity implements IUser {
   @JsonProperty('roles', UserRoleConverter)
   roles = [UserRole.USER];
 
-  @JsonProperty('activated', Boolean, true)
-  activated? = false;
+  @JsonProperty('active', Boolean, true)
+  active? = false;
 
-  @JsonProperty('createdBy', String, true)
+  @JsonProperty('createdBy', Any, true)
   createdBy = '';
 
   @JsonProperty('createdDate', DateConverter, true)
   createdDate = null;
 
-  @JsonProperty('lastModifiedBy', String, true)
+  @JsonProperty('lastModifiedBy', Any, true)
   lastModifiedBy? = null;
 
   @JsonProperty('lastModifiedDate', DateConverter, true)
   lastModifiedDate? = null;
 
   public getMongoEntity() {
-    return { ...this, _id: this._id && (this._id as Types.ObjectId).toString() };
+    const result: IUser = { ...this, _id: this._id && (this._id as Types.ObjectId).toString() };
+    if (!result._id) {
+      delete result._id;
+    }
+    return result;
   }
 }

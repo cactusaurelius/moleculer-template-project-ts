@@ -3,12 +3,15 @@ import { dbUserMixin, eventsUserMixin } from '../mixins';
 import { Config } from '../common';
 import { Action, Delete, Get, Method, Post, Put, Service } from '@d0whc3r/moleculer-decorators';
 import {
+  getActionConfig,
   IUser,
+  listActionConfig,
   MoleculerDBService,
   RestOptions,
   UserAuthMeta,
   UserCreateParams,
   UserDeleteParams,
+  UserEvent,
   UserGetParams,
   UserJWT,
   UserLoginMeta,
@@ -26,13 +29,14 @@ import { JsonConvert } from 'json2typescript';
 import { UserEntity } from '../entities';
 import { constants } from 'http2';
 import { DbContextParameters } from 'moleculer-db';
+import { userErrorCode, userErrorMessage } from '../types/errors';
 
 const validateUserBase: ActionParams = {
   login: 'string',
   email: 'email',
   firstName: 'string',
   lastName: { type: 'string', optional: true },
-  activated: { type: 'boolean', optional: true },
+  active: { type: 'boolean', optional: true },
   roles: { type: 'array', items: 'string' },
   langKey: { type: 'string', min: 2, max: 2, optional: true }
 };
@@ -42,7 +46,7 @@ const validateUserBaseOptional: ActionParams = {
   email: { type: 'email', optional: true },
   firstName: { type: 'string', optional: true },
   lastName: { type: 'string', optional: true },
-  activated: { type: 'boolean', optional: true },
+  active: { type: 'boolean', optional: true },
   roles: { type: 'array', items: 'string', optional: true },
   langKey: { type: 'string', min: 2, max: 2, optional: true }
 };
@@ -59,7 +63,30 @@ function encryptPassword(password: string) {
     pageSize: 10,
     rest: '/user',
     JWT_SECRET: Config.JWT_SECRET,
-    fields: ['_id', 'login', 'firstName', 'lastName', 'email', 'langKey', 'roles', 'activated']
+    fields: [
+      '_id',
+      'login',
+      'firstName',
+      'lastName',
+      'email',
+      'langKey',
+      'roles',
+      'active',
+      'createdBy',
+      'createdDate',
+      'lastModifiedBy',
+      'lastModifiedDate'
+    ],
+    populates: {
+      createdBy: {
+        action: 'user.id',
+        fields: ['login', 'firstName', 'lastName']
+      },
+      lastModifiedBy: {
+        action: 'user.id',
+        fields: ['login', 'firstName', 'lastName']
+      }
+    }
   }
 })
 export default class UserService extends MoleculerDBService<UserServiceSettingsOptions, IUser> {
@@ -73,7 +100,7 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
       token: 'string'
     }
   })
-  async resolveToken(ctx: Context<UserTokenParams, {}>) {
+  async resolveToken(ctx: Context<UserTokenParams, Record<string, unknown>>) {
     try {
       const result = await new Promise<IUser | undefined>((resolve, reject) => {
         jwt.verify(ctx.params.token, this.settings.JWT_SECRET, (err: VerifyErrors | null, decoded?: any) => {
@@ -85,8 +112,7 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
         });
       });
       if (result && result._id) {
-        const user = await this.getById(result._id.toString());
-        return this.transformDocuments(ctx, {}, user);
+        return this._get(ctx, { id: result._id });
       }
     } catch (e) {
       this.logger.error('Error resolving token', ctx.params.token, e);
@@ -96,7 +122,9 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
   @Action({
     name: 'validateRole',
-    cache: false,
+    cache: {
+      keys: ['roles', 'user']
+    },
     params: {
       roles: { type: 'array', items: 'string', enum: Object.values(UserRole) }
     }
@@ -105,6 +133,15 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     const roles = ctx.params.roles;
     const userRoles = ctx.meta.user.roles;
     return !roles || !roles.length || roles.some((r) => userRoles.includes(r));
+  }
+
+  @Action({
+    name: 'id',
+    ...getActionConfig
+  })
+  async getUserId(ctx: Context<UserGetParams, UserAuthMeta>) {
+    const params = this.sanitizeParams(ctx, ctx.params);
+    return this._get(ctx, params);
   }
 
   @Action({
@@ -119,33 +156,34 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
 
     const result = await this.adapter.findOne<IUser>({ login });
     if (!result) {
-      throw new moleculer.Errors.MoleculerClientError('User not valid or wrong password!', constants.HTTP_STATUS_UNPROCESSABLE_ENTITY, '', [
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.WRONG, userErrorCode.WRONG, '', [
         { field: 'login/password', message: 'not found' }
       ]);
-    } else if (!result.activated) {
-      throw new moleculer.Errors.MoleculerClientError('User not active!', constants.HTTP_STATUS_FORBIDDEN, '', [
-        { field: 'disabled', message: 'user disabled' }
+    } else if (!result.active) {
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.NOT_ACTIVE, userErrorCode.NOT_ACTIVE, '', [
+        { field: 'disabled', message: 'user not active' }
       ]);
     }
 
     const valid = await bcrypt.compare(password, result.password);
     if (!valid) {
-      throw new moleculer.Errors.MoleculerClientError('User not valid or wrong password!', constants.HTTP_STATUS_UNPROCESSABLE_ENTITY, '', [
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.WRONG, userErrorCode.WRONG, '', [
         { field: 'login/password', message: 'not found' }
       ]);
     }
 
-    const user = <UserJWT>await this.transformDocuments(ctx, {}, result);
+    const user = (await this.transformDocuments(ctx, {}, result)) as IUser;
     const token = this.generateJWT(user);
     // eslint-disable-next-line require-atomic-updates
     ctx.meta.$responseHeaders = { Authorization: `Bearer ${token}` };
-    return user;
+    await ctx.emit<LogCreateParams>(auditEvent, { user: user._id!.toString(), isError: false, action: LogAction.AUTHENTICATION_SUCCESS });
+    return { token };
   }
 
   @Get<RestOptions>('/logout', {
     name: 'logout'
   })
-  logout(ctx: Context<{}, UserAuthMeta>) {
+  logout(ctx: Context<Record<string, unknown>, UserAuthMeta>) {
     console.log('user logout', ctx.meta.user);
   }
 
@@ -159,33 +197,31 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
   })
   async createUser(ctx: Context<UserCreateParams, UserAuthMeta>) {
     const entity = ctx.params;
-    if (entity.login) {
-      const found = await this.adapter.findOne<IUser>({ login: entity.login });
-      if (found) {
-        throw new moleculer.Errors.MoleculerClientError('Username exist!', constants.HTTP_STATUS_UNPROCESSABLE_ENTITY, '', [
-          { field: 'login', message: 'duplicated' }
-        ]);
-      }
+    const foundLogin = await this.adapter.findOne<IUser>({ login: entity.login });
+    if (foundLogin) {
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.DUPLICATED_LOGIN, userErrorCode.DUPLICATED_LOGIN, '', [
+        { field: 'login', message: 'duplicated' }
+      ]);
     }
-    if (entity.email) {
-      const found = await this.adapter.findOne<IUser>({ email: entity.email });
-      if (found) {
-        throw new moleculer.Errors.MoleculerClientError('Email exist!', constants.HTTP_STATUS_UNPROCESSABLE_ENTITY, '', [
-          { field: 'email', message: 'duplicated' }
-        ]);
-      }
+    const foundEmail = await this.adapter.findOne<IUser>({ email: entity.email });
+    if (foundEmail) {
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.DUPLICATED_EMAIL, userErrorCode.DUPLICATED_EMAIL, '', [
+        { field: 'email', message: 'duplicated' }
+      ]);
     }
 
     entity.password = encryptPassword(entity.password);
-    const parsedEntity = new JsonConvert().deserializeObject(entity, UserEntity).getMongoEntity();
+    const parsedEntity = this.removeForbiddenFields(new JsonConvert().deserializeObject(entity, UserEntity).getMongoEntity());
     const modEntity = this.updateAuthor(parsedEntity, { creator: ctx.meta.user });
     return this._create(ctx, modEntity);
   }
 
   @Get<RestOptions>('/', {
     name: 'get',
-    cache: {
-      keys: ['id', 'populate', 'fields', 'mapping']
+    cache: getActionConfig.cache,
+    params: {
+      ...getActionConfig.params,
+      id: { type: 'string', optional: true }
     }
   })
   async getMe(ctx: Context<DbContextParameters, UserAuthMeta>) {
@@ -196,13 +232,11 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
   @Get<RestOptions>('/:id', {
     name: 'get.id',
     roles: UserRole.SUPERADMIN,
-    cache: {
-      keys: ['id', 'populate', 'fields', 'mapping']
-    }
+    ...getActionConfig
   })
   async getUser(ctx: Context<UserGetParams, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
-    return this._get(ctx, params);
+    return this._get(ctx, { ...params, populate: ['createdBy', 'lastModifiedBy'] });
   }
 
   @Put<RestOptions>('/:id', {
@@ -219,12 +253,16 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     delete ctx.params.id;
     const user = await this.getById(id);
     if (!user) {
-      throw new moleculer.Errors.MoleculerClientError('User not found!', constants.HTTP_STATUS_NOT_FOUND);
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.NOT_FOUND, userErrorCode.NOT_FOUND);
     }
+    const parsedEntity = this.removeForbiddenFields(new JsonConvert().deserializeObject(ctx.params, UserEntity).getMongoEntity());
     const newUser = this.updateAuthor(
       {
         ...user,
-        ...ctx.params,
+        ...parsedEntity,
+        password: user.password,
+        createdBy: user.createdBy,
+        createdDate: user.createdDate,
         _id: id
       },
       { modifier: ctx.meta.user }
@@ -233,20 +271,22 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     if (password) {
       newUser.password = encryptPassword(password);
     }
-    return this._update(ctx, newUser);
+    const result = await this._update(ctx, newUser);
+    return this.transformDocuments(ctx, { populate: ['createdBy', 'lastModifiedBy'] }, result);
   }
 
   @Delete<RestOptions>('/:id', {
     name: 'remove',
-    roles: UserRole.SUPERADMIN
+    roles: UserRole.SUPERADMIN,
+    params: { id: 'string' }
   })
   async deleteUser(ctx: Context<UserDeleteParams, UserAuthMeta>) {
-    // TODO: Broadcast to delete in all related services
     if (ctx.params.id === ctx.meta.user._id) {
-      throw new moleculer.Errors.MoleculerClientError('User can not delete itself!', constants.HTTP_STATUS_BAD_REQUEST);
+      throw new moleculer.Errors.MoleculerClientError(userErrorMessage.DELETE_ITSELF, userErrorCode.DELETE_ITSELF);
     }
     const params = this.sanitizeParams(ctx, ctx.params);
     await this._remove(ctx, params);
+    await this.broker.emit(UserEvent.DELETED, { id: ctx.params.id });
     // eslint-disable-next-line require-atomic-updates
     ctx.meta.$statusCode = constants.HTTP_STATUS_ACCEPTED;
   }
@@ -254,17 +294,15 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
   @Get<RestOptions>('/list', {
     name: 'list',
     roles: UserRole.SUPERADMIN,
-    cache: {
-      keys: ['populate', 'fields', 'page', 'pageSize', 'sort', 'search', 'searchFields', 'query']
-    }
+    ...listActionConfig
   })
   async listAllUsers(ctx: Context<DbContextParameters, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
-    return this._list(ctx, params);
+    return this._list(ctx, { ...params });
   }
 
   @Method
-  generateJWT(user: UserJWT) {
+  generateJWT(user: IUser) {
     const exp = new Date();
     exp.setDate(exp.getDate() + 60);
 
@@ -293,6 +331,18 @@ export default class UserService extends MoleculerDBService<UserServiceSettingsO
     if (modifier) {
       result = { ...result, lastModifiedBy: modifier._id, lastModifiedDate: new Date() };
     }
+    return result;
+  }
+
+  @Method
+  private removeForbiddenFields(user: IUser) {
+    const result = { ...user };
+    delete user._id;
+    delete (user as any).id;
+    delete user.createdDate;
+    delete user.createdBy;
+    delete user.lastModifiedDate;
+    delete user.lastModifiedBy;
     return result;
   }
 }

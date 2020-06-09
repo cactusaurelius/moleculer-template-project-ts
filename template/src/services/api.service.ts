@@ -220,7 +220,7 @@ export default class ApiService extends moleculer.Service {
     res.setHeader('Content-type', 'application/json; charset=utf-8');
     res.writeHead(err.code || 500);
 
-    if (err.code == 422) {
+    if (err.code === 422) {
       const o: any = {};
       err.data.forEach((e: any) => {
         const field = e.field.split('.').pop();
@@ -236,7 +236,40 @@ export default class ApiService extends moleculer.Service {
   }
 
   @Method
-  async authenticate(ctx: Context<{}, UserAuthMeta>, route: any, req: RequestMessage) {
+  async rejectAuth(ctx: Context<Record<string, unknown>, UserAuthMeta>, error: Errors.MoleculerError) {
+    if (ctx.meta.user) {
+      const context = pick(
+        ctx,
+        'nodeID',
+        'id',
+        'event',
+        'eventName',
+        'eventType',
+        'eventGroups',
+        'parentID',
+        'requestID',
+        'caller',
+        'params',
+        'meta',
+        'locals'
+      );
+      const action = pick(ctx.action, 'rawName', 'name', 'params', 'rest');
+      const logInfo = {
+        action: 'AUTH_FAILURE',
+        details: {
+          error,
+          context,
+          action,
+          meta: ctx.meta
+        }
+      };
+      this.logger.error(logInfo);
+    }
+    return Promise.reject(error);
+  }
+
+  @Method
+  async authenticate(ctx: Context<Record<string, unknown>, UserAuthMeta>, route: any, req: RequestMessage) {
     const auth = req.headers.authorization;
 
     if (auth) {
@@ -248,25 +281,24 @@ export default class ApiService extends moleculer.Service {
 
       if (token) {
         const user = await ctx.call<UserJWT | undefined, UserTokenParams>('user.resolveToken', { token });
-        if (user) {
+        if (user && user.active) {
           return Promise.resolve(user);
         }
       }
-      return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
+      return this.rejectAuth(ctx, new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
     }
-    // return Promise.resolve(null);
-    return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
+    return this.rejectAuth(ctx, new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
   }
 
   @Method
-  async authorize(ctx: Context<{}, UserAuthMeta>, route: any, req: RequestMessage) {
+  async authorize(ctx: Context<Record<string, unknown>, UserAuthMeta>, route: any, req: RequestMessage) {
     const user = ctx.meta.user;
 
     if (req.$action.auth === false) {
       return Promise.resolve(null);
     }
     if (!user) {
-      return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
+      return this.rejectAuth(ctx, new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_NO_TOKEN, null));
     }
     const aroles = Array.isArray(req.$action.roles) ? req.$action.roles : [req.$action.roles];
     const oroles = Array.isArray(req.$route.opts.roles) ? req.$route.opts.roles : [req.$route.opts.roles];
@@ -274,8 +306,8 @@ export default class ApiService extends moleculer.Service {
     const roles = [...new Set(allRoles)];
     const valid = await ctx.call<boolean, UserRolesParams>('user.validateRole', { roles });
     if (!valid) {
-      return Promise.reject(new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
+      return this.rejectAuth(ctx, new ApiGateway.Errors.UnAuthorizedError(ApiGateway.Errors.ERR_INVALID_TOKEN, null));
     }
-    return Promise.resolve({ ...ctx, meta: { user } });
+    return Promise.resolve(ctx);
   }
 }

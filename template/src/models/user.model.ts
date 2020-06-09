@@ -39,7 +39,7 @@ const definition: definitionType<IUser> = (collection?: string) => ({
     unique: true,
     index: true
   },
-  activated: {
+  active: {
     type: Boolean,
     default: false
   },

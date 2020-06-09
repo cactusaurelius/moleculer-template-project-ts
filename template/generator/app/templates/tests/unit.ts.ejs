@@ -1,0 +1,201 @@
+import moleculer, { Context, Endpoint, ServiceBroker } from 'moleculer';
+import TestingService from '../../../src/services/<%= canonicalLower %>.service';
+import { <%= canonicalName %>CreateParams, <%= canonicalName %>DeleteParams, <%= canonicalName %>GetParams, <%= canonicalName %>UpdateParams, UserAuthMeta } from '../../../src/types';
+import { clearDB, testConfig } from '../../helpers/helper';
+import { Config } from '../../../src/common';
+import { DbContextParameters } from 'moleculer-db';
+import { <%= canonicalLower %>1, <%= canonicalLower %>2 } from '../../helpers/<%= canonicalLower %>.helper';
+
+function calledCacheClean(mockFn: jest.SpyInstance) {
+  expect(mockFn)
+    .toHaveBeenCalled()
+    .toHaveBeenCalledTimes(1)
+    .toHaveBeenCalledWith(`cache.clean.${Config.DB_<%= uppercaseName %>.dbname}.${Config.DB_<%= uppercaseName %>.collection}`);
+}
+
+describe('Unit tests for <%= canonicalName %> service', () => {
+  let broker: ServiceBroker;
+  let endpoint: Endpoint;
+  let service: TestingService;
+  const spyBroadcast = jest.spyOn(Context.prototype, 'broadcast');
+  beforeEach(async () => {
+    broker = new ServiceBroker(testConfig);
+    endpoint = {
+      broker,
+      id: Math.random().toString(36).slice(2),
+      local: true,
+      node: {},
+      state: true
+    };
+    service = broker.createService(TestingService) as TestingService;
+    await clearDB(Config.DB_<%= uppercaseName %>);
+    await broker.start();
+    await broker.waitForServices(service.name);
+  });
+  afterEach(() => {
+    jest.clearAllMocks();
+    spyBroadcast.mockClear();
+  });
+  afterAll(async () => {
+    await broker.stop();
+    await clearDB(Config.DB_<%= uppercaseName %>);
+  });
+
+  beforeEach(() => expect.hasAssertions());
+
+  describe('create <%= canonicalLower %>', () => {
+    const <%= canonicalLower %>: <%= canonicalName %>CreateParams = {};
+    let context: Context<<%= canonicalName %>CreateParams, UserAuthMeta>;
+    beforeEach(() => {
+      context = new Context<<%= canonicalName %>CreateParams, UserAuthMeta>(broker, endpoint);
+    });
+    it('create', async () => {
+      context.params = <%= canonicalLower %>;
+      try {
+        const response = await service.create<%= canonicalName %>(context);
+        expect(response).toBeDefined().toBeObject().toContainEntry(['name', <%= canonicalLower %>.name]);
+      } catch (err) {
+        fail(err);
+      }
+      calledCacheClean(spyBroadcast);
+    });
+    it('create duplicated', async () => {
+      context.params = <%= canonicalLower %>;
+      try {
+        await service.create<%= canonicalName %>(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+      expect(spyBroadcast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('list <%= canonicalLower %>s', () => {
+    let context: Context<DbContextParameters, UserAuthMeta>;
+    beforeEach(() => {
+      context = new Context<DbContextParameters, UserAuthMeta>(broker, endpoint);
+      context.action = { name: '<%= canonicalLower %>.list' };
+    });
+    it('list', async () => {
+      try {
+        const response = await service.list<%= canonicalName %>s(context);
+        expect(response)
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntries([
+            ['page', 1],
+            ['pageSize', 10],
+            ['totalPages', 1],
+            ['rows', expect.any(Array)]
+          ]);
+        expect(response.rows).toBeDefined().toBeArray().toHaveLength(2);
+      } catch (err) {
+        fail(err);
+      }
+    });
+  });
+
+  describe('get <%= canonicalLower %>', () => {
+    let context: Context<<%= canonicalName %>GetParams, UserAuthMeta>;
+    beforeEach(() => {
+      context = new Context<<%= canonicalName %>GetParams, UserAuthMeta>(broker, endpoint);
+      context.action = {
+        name: '<%= canonicalLower %>.get'
+      };
+    });
+    it('<%= canonicalLower %>', async () => {
+      try {
+        context.params: <%= canonicalName %>GetParams = { id: <%= canonicalLower %>1._id.toString() };
+        const response = await service.get<%= canonicalName %>(context);
+        expect(response)
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntries([
+            ['name', <%= canonicalLower %>1.name]
+          ]);
+      } catch (err) {
+        fail(err);
+      }
+    });
+    it('not existing <%= canonicalLower %>', async () => {
+      try {
+        context.params = { id: 'xxx' };
+        await service.get<%= canonicalName %>(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+    });
+  });
+
+  describe('update <%= canonicalLower %>', () => {
+    let context: Context<<%= canonicalName %>UpdateParams, UserAuthMeta>;
+    beforeEach(() => {
+      context = new Context<<%= canonicalName %>UpdateParams, UserAuthMeta>(broker, endpoint);
+      context.action = {
+        name: '<%= canonicalLower %>.update'
+      };
+    });
+    it('update', async () => {
+      try {
+        context.params = { id: <%= canonicalLower %>1._id.toString(), ...<%= canonicalLower %>1 };
+        const response = await service.update<%= canonicalName %>(context);
+        expect(response)
+          .toBeDefined()
+          .toBeObject()
+          .toContainEntries([
+            ['name', context.params.name]
+          ]);
+      } catch (err) {
+        fail(err);
+      }
+      calledCacheClean(spyBroadcast);
+    });
+    it('not existing <%= canonicalLower %>', async () => {
+      try {
+        context.params = { id: 'xxx' };
+        await service.update<%= canonicalName %>(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+      expect(spyBroadcast).not.toHaveBeenCalled();
+    });
+    it('duplicated <%= canonicalLower %>', async () => {
+      try {
+        context.params = { id: <%= canonicalLower %>1._id.toString(), ...<%= canonicalLower %>1, name: <%= canonicalLower %>2.name };
+        await service.update<%= canonicalName %>(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+      expect(spyBroadcast).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('delete <%= canonicalLower %>', () => {
+    let context: Context<<%= canonicalName %>DeleteParams, UserAuthMeta>;
+    beforeEach(() => {
+      context = new Context<<%= canonicalName %>DeleteParams, UserAuthMeta>(broker, endpoint);
+      context.action = {
+        name: 'remove'
+      };
+    });
+    it('delete', async () => {
+      context.params = { id: <%= canonicalLower %>1._id.toString() };
+      await service.delete<%= canonicalName %>(context);
+      calledCacheClean(spyBroadcast);
+      try {
+        await broker.call('<%= canonicalLower %>.get', { id: <%= canonicalLower %>1._id.toString() });
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+    });
+    it('not found', async () => {
+      context.params = { id: 'xxx' };
+      try {
+        await service.delete<%= canonicalName %>(context);
+      } catch (err) {
+        expect(err).toBeInstanceOf(moleculer.Errors.MoleculerClientError);
+      }
+      expect(spyBroadcast).not.toHaveBeenCalled();
+    });
+  });
+});
