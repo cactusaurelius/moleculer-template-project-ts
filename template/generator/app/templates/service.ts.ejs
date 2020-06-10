@@ -1,4 +1,4 @@
-import { db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin } from '../mixins';
+<%if (needDB) {%>import { db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin } from '../mixins';<%}%>
 import {
   <%= canonicalName %>CreateParams,
   <%= canonicalName %>DeleteParams,
@@ -12,14 +12,15 @@ import {
   MoleculerDBService,
   RestOptions,
   UserAuthMeta,
-  UserRole
+  UserRole,
+  <%= canonicalLower %>ErrorCode,
+  <%= canonicalLower %>ErrorMessage
 } from '../types';
 import moleculer, { ActionParams, Context } from 'moleculer';
 import { DbContextParameters } from 'moleculer-db';
 import { constants } from 'http2';
-import { JsonConvert } from 'json2typescript';
-import { <%= canonicalName %>Entity } from '../entities';
-import { <%= canonicalLower %>ErrorCode, <%= canonicalLower %>ErrorMessage } from '../types/errors';
+<%if (needDB) {%>import { JsonConvert } from 'json2typescript';
+import { <%= canonicalName %>Entity } from '../entities';<%}%>
 import { Delete, Get, Post, Put, Service } from '@d0whc3r/moleculer-decorators';
 
 const validate<%= canonicalName %>Base: ActionParams = {
@@ -30,7 +31,7 @@ const validate<%= canonicalName %>BaseOptional: ActionParams = {
 
 @Service<<%= canonicalName %>ServiceOptions>({
   name: '<%= canonicalLower %>',
-  mixins: [db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin],
+<%if (needDB) {%>  mixins: [db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin],<%}%>
   settings: {
     idField: '_id',
     pageSize: 10,
@@ -47,10 +48,9 @@ export default class <%= canonicalName %>Service extends MoleculerDBService<<%= 
     params: { ...validate<%= canonicalName %>Base }
   })
   async create<%= canonicalName %>(ctx: Context<<%= canonicalName %>CreateParams, UserAuthMeta>) {
-    const entity = ctx.params;
-    const parsedEntity = new JsonConvert().deserializeObject(entity, <%= canonicalName %>Entity).getMongoEntity();
-    return this._create(ctx, parsedEntity);
-    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
+    const entity = this.sanitizeParams(ctx, ctx.params);;
+<%if (needDB) {%>    const parsedEntity = new JsonConvert().deserializeObject(entity, <%= canonicalName %>Entity).getMongoEntity();
+    return this._create(ctx, parsedEntity);<%} else {%>    return this._create(ctx, entity);<%}%>
   }
 
   @Get<RestOptions>('/', {
@@ -60,7 +60,6 @@ export default class <%= canonicalName %>Service extends MoleculerDBService<<%= 
   async list<%= canonicalName %>s(ctx: Context<DbContextParameters, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
     return this._list(ctx, params);
-    // return this._list(ctx, { ...params, populate: [''] });
   }
 
   @Get<RestOptions>('/:id', {
@@ -70,7 +69,6 @@ export default class <%= canonicalName %>Service extends MoleculerDBService<<%= 
   async get<%= canonicalName %>(ctx: Context<<%= canonicalName %>GetParams, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
     return this._get(ctx, params);
-    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
   }
 
   @Put<RestOptions>('/:id', {
@@ -94,7 +92,6 @@ export default class <%= canonicalName %>Service extends MoleculerDBService<<%= 
       _id: id
     };
     return this._update(ctx, new<%= canonicalName %>);
-    // return <Promise<I<%= canonicalName %>>>this.transformDocuments(ctx, { populate: [''] }, response);
   }
 
   @Delete<RestOptions>('/:id', {

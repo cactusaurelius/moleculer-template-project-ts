@@ -8,8 +8,7 @@ import request from 'supertest';
 import { constants } from 'http2';
 import { adminUser, getJWT, simpleUser } from '../../helpers/user.helper';
 import { <%= canonicalLower %>1, <%= canonicalLower %>2 } from '../../helpers/<%= canonicalLower %>.helper';
-import { I<%= canonicalName %> } from '../../../src/types';
-import { <%= canonicalLower %>ErrorCode } from '../../../src/types/errors';
+import { I<%= canonicalName %>, <%= canonicalLower %>ErrorCode, <%= canonicalName %>CreateParams } from '../../../src/types';
 
 const broker = new ServiceBroker(testConfig);
 const testingService = broker.createService(TestingService);

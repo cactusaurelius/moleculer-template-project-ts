@@ -104,8 +104,8 @@ class GeneratorComponent extends Generator {
     if (content.includes(errorHeader)) {
       return;
     }
-    errorHeader.push(`  NOT_FOUND = '${data.canonicalLower}.notfound'`, `  DUPLICATED = '${data.canonicalLower}.duplicated'`, '}\n');
-    errorHeader.push(`export const ${data.canonicalLower}ErrorCode = {`, '  NOT_FOUND: constants.HTTP_STATUS_NOT_FOUND', '  DUPLICATED: constants.HTTP_STATUS_UNPROCESSABLE_ENTITY', '};');
+    errorHeader.push(`  NOT_FOUND = '${data.canonicalLower}.notfound',`, `  DUPLICATED = '${data.canonicalLower}.duplicated'`, '}\n');
+    errorHeader.push(`export const ${data.canonicalLower}ErrorCode = {`, '  NOT_FOUND: constants.HTTP_STATUS_NOT_FOUND,', '  DUPLICATED: constants.HTTP_STATUS_UNPROCESSABLE_ENTITY', '};');
     content += `\n${errorHeader.join('\n')}\n`;
     this.fs.write(destinationErrors, content);
   }

@@ -1,18 +1,18 @@
 import moleculer, { Context, Endpoint, ServiceBroker } from 'moleculer';
 import TestingService from '../../../src/services/<%= canonicalLower %>.service';
 import { <%= canonicalName %>CreateParams, <%= canonicalName %>DeleteParams, <%= canonicalName %>GetParams, <%= canonicalName %>UpdateParams, UserAuthMeta } from '../../../src/types';
-import { clearDB, testConfig } from '../../helpers/helper';
-import { Config } from '../../../src/common';
+import {<%if (needDB) {%> clearDB,<%}%> testConfig } from '../../helpers/helper';
+<%if (needDB) {%>import { Config } from '../../../src/common';<%}%>
 import { DbContextParameters } from 'moleculer-db';
 import { <%= canonicalLower %>1, <%= canonicalLower %>2 } from '../../helpers/<%= canonicalLower %>.helper';
-
-<%if (needDB) {%>function calledCacheClean(mockFn: jest.SpyInstance) {
+<%if (needDB) {%>
+function calledCacheClean(mockFn: jest.SpyInstance) {
   expect(mockFn)
     .toHaveBeenCalled()
     .toHaveBeenCalledTimes(1)
     .toHaveBeenCalledWith(`cache.clean.${Config.DB_<%= uppercaseName %>.dbname}.${Config.DB_<%= uppercaseName %>.collection}`);
-}<%}%>
-
+}
+<%}%>
 describe('Unit tests for <%= canonicalName %> service', () => {
   let broker: ServiceBroker;
   let endpoint: Endpoint;

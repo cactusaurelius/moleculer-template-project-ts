@@ -1,13 +1,13 @@
 import { Options } from '@d0whc3r/moleculer-decorators';
-import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
-<% if (needDB) {%>import { I<%= canonicalName %> } from '../entities';<%} else {%>
+<% if (needDB) {%>import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
+import { I<%= canonicalName %> } from '../entities';<%} else {%>
 import { ObjectIdNull } from './interfaces';
 
 export interface I<%= canonicalName %> extends I<%= canonicalName %>Base {
   _id: ObjectIdNull;
 }<%}%>
 
-export interface <%= canonicalName %>ServiceSettingsOptions extends DbServiceSettings {
+export interface <%= canonicalName %>ServiceSettingsOptions<% if (needDB) {%> extends DbServiceSettings<%}%> {
   rest: '/<%= serviceName %>';
   fields: (keyof Required<I<%= canonicalName %>>)[];
   populates?: any;
@@ -28,7 +28,7 @@ export interface <%= canonicalName %>UpdateParams extends Partial<I<%= canonical
   id: string;
 }
 
-export interface <%= canonicalName %>GetParams extends DbContextParameters {
+export interface <%= canonicalName %>GetParams<% if (needDB) {%> extends DbContextParameters<%}%> {
   id: string;
 }
 
