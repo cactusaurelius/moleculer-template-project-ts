@@ -6,12 +6,12 @@ import { Config } from '../../../src/common';
 import { DbContextParameters } from 'moleculer-db';
 import { <%= canonicalLower %>1, <%= canonicalLower %>2 } from '../../helpers/<%= canonicalLower %>.helper';
 
-function calledCacheClean(mockFn: jest.SpyInstance) {
+<%if (needDB) {%>function calledCacheClean(mockFn: jest.SpyInstance) {
   expect(mockFn)
     .toHaveBeenCalled()
     .toHaveBeenCalledTimes(1)
     .toHaveBeenCalledWith(`cache.clean.${Config.DB_<%= uppercaseName %>.dbname}.${Config.DB_<%= uppercaseName %>.collection}`);
-}
+}<%}%>
 
 describe('Unit tests for <%= canonicalName %> service', () => {
   let broker: ServiceBroker;
@@ -57,7 +57,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
       } catch (err) {
         fail(err);
       }
-      calledCacheClean(spyBroadcast);
+<%if (needDB) {%>      calledCacheClean(spyBroadcast);<%}%>
     });
     it('create duplicated', async () => {
       context.params = <%= canonicalLower %>;
@@ -148,7 +148,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
       } catch (err) {
         fail(err);
       }
-      calledCacheClean(spyBroadcast);
+<%if (needDB) {%>      calledCacheClean(spyBroadcast);<%}%>
     });
     it('not existing <%= canonicalLower %>', async () => {
       try {
@@ -181,7 +181,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
     it('delete', async () => {
       context.params = { id: <%= canonicalLower %>1._id.toString() };
       await service.delete<%= canonicalName %>(context);
-      calledCacheClean(spyBroadcast);
+<%if (needDB) {%>      calledCacheClean(spyBroadcast);<%}%>
       try {
         await broker.call('<%= canonicalLower %>.get', { id: <%= canonicalLower %>1._id.toString() });
       } catch (err) {

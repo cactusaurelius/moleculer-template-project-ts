@@ -1,6 +1,11 @@
 import { Options } from '@d0whc3r/moleculer-decorators';
 import { DbContextParameters, DbServiceSettings } from 'moleculer-db';
-import { I<%= canonicalName %> } from '../entities';
+<% if (needDB) {%>import { I<%= canonicalName %> } from '../entities';<%} else {%>
+import { ObjectIdNull } from './interfaces';
+
+export interface I<%= canonicalName %> extends I<%= canonicalName %>Base {
+  _id: ObjectIdNull;
+}<%}%>
 
 export interface <%= canonicalName %>ServiceSettingsOptions extends DbServiceSettings {
   rest: '/<%= serviceName %>';
