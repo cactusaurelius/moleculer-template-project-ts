@@ -18,6 +18,7 @@ module.exports = {
       parser: '@typescript-eslint/parser',
       plugins: ['@typescript-eslint'],
       extends: [
+        'prettier/@typescript-eslint',
         'plugin:prettier/recommended',
         'plugin:@typescript-eslint/eslint-recommended',
         'plugin:@typescript-eslint/recommended',
@@ -43,7 +44,7 @@ module.exports = {
         '@typescript-eslint/func-call-spacing': 2,
 
         // tslint
-        '@typescript-eslint/class-name-casing': 2,
+        // '@typescript-eslint/class-name-casing': 2,
         '@typescript-eslint/explicit-member-accessibility': [
           0,
           {
@@ -77,6 +78,7 @@ module.exports = {
           }
         ],
         '@typescript-eslint/explicit-function-return-type': 0,
+        '@typescript-eslint/explicit-module-boundary-types': 0,
         '@typescript-eslint/no-explicit-any': 0,
         '@typescript-eslint/interface-name-prefix': 0,
         '@typescript-eslint/unbound-method': [
