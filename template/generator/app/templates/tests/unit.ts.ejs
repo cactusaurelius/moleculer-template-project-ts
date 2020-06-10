@@ -28,7 +28,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
       state: true
     };
     service = broker.createService(TestingService) as TestingService;
-    await clearDB(Config.DB_<%= uppercaseName %>);
+<%if (needDB) {%>    await clearDB(Config.DB_<%= uppercaseName %>);<%}%>
     await broker.start();
     await broker.waitForServices(service.name);
   });
@@ -38,7 +38,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
   });
   afterAll(async () => {
     await broker.stop();
-    await clearDB(Config.DB_<%= uppercaseName %>);
+<%if (needDB) {%>    await clearDB(Config.DB_<%= uppercaseName %>);<%}%>
   });
 
   beforeEach(() => expect.hasAssertions());
