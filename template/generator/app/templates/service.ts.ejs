@@ -17,11 +17,11 @@ import {
   <%= canonicalLower %>ErrorMessage
 } from '../types';
 import moleculer, { ActionParams, Context } from 'moleculer';
-import { DbContextParameters } from 'moleculer-db';
 import { constants } from 'http2';
-<%if (needDB) {%>import { JsonConvert } from 'json2typescript';
-import { <%= canonicalName %>Entity } from '../entities';<%}%>
 import { Delete, Get, Post, Put, Service } from '@d0whc3r/moleculer-decorators';
+<%if (needDB) {%>import { DbContextParameters } from 'moleculer-db';
+import { JsonConvert } from 'json2typescript';
+import { <%= canonicalName %>Entity } from '../entities';<%}%>
 
 const validate<%= canonicalName %>Base: ActionParams = {
 };
@@ -33,13 +33,13 @@ const validate<%= canonicalName %>BaseOptional: ActionParams = {
   name: '<%= canonicalLower %>',
 <%if (needDB) {%>  mixins: [db<%= canonicalName %>Mixin, events<%= canonicalName %>Mixin],<%}%>
   settings: {
+    rest: '/<%= canonicalLower %>',
+    fields: ['_id'],<%if (needDB) {%>
     idField: '_id',
     pageSize: 10,
-    rest: '/<%= canonicalLower %>',
-    fields: ['_id'],
     entityValidator: {
     }
-  }
+<%}%>  }
 })
 export default class <%= canonicalName %>Service extends MoleculerDBService<<%= canonicalName %>ServiceSettingsOptions, I<%= canonicalName %>> {
   @Post<RestOptions>('/', {
@@ -57,7 +57,7 @@ export default class <%= canonicalName %>Service extends MoleculerDBService<<%= 
     name: 'list',
     ...listActionConfig
   })
-  async list<%= canonicalName %>s(ctx: Context<DbContextParameters, UserAuthMeta>) {
+  async list<%= canonicalName %>s(ctx: Context<<%if (needDB) {%>DbContextParameters<%} else {%>Record<string, unknown><%}%>, UserAuthMeta>) {
     const params = this.sanitizeParams(ctx, ctx.params);
     return this._list(ctx, params);
   }

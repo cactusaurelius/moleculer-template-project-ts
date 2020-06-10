@@ -105,7 +105,7 @@ describe('Unit tests for <%= canonicalName %> service', () => {
     });
     it('<%= canonicalLower %>', async () => {
       try {
-        context.params: <%= canonicalName %>GetParams = { id: <%= canonicalLower %>1._id.toString() };
+        context.params = { id: <%= canonicalLower %>1._id.toString() };
         const response = await service.get<%= canonicalName %>(context);
         expect(response)
           .toBeDefined()
