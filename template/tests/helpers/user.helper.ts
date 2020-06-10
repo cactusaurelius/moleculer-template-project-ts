@@ -9,7 +9,7 @@ export const simpleUser: UserJWT = {
   lastName: 'user',
   email: 'user@admin.com',
   langKey: UserLang.ES,
-  activated: true
+  active: true
 };
 
 export const superAdminUser: UserJWT = {
@@ -20,7 +20,7 @@ export const superAdminUser: UserJWT = {
   lastName: 'sadmin',
   email: 'sadmin@admin.com',
   langKey: UserLang.ES,
-  activated: true
+  active: true
 };
 
 export const adminUser: UserJWT = {
@@ -31,7 +31,7 @@ export const adminUser: UserJWT = {
   lastName: 'admin',
   email: 'admin@admin.com',
   langKey: UserLang.ES,
-  activated: true
+  active: true
 };
 
 export const disabledUser: UserJWT = {
@@ -42,11 +42,11 @@ export const disabledUser: UserJWT = {
   lastName: 'user',
   email: 'user1@admin.com',
   langKey: UserLang.ES,
-  activated: false
+  active: false
 };
 
 export async function getJWT(server: string, login = superAdminUser.login, password = '123456', round = 0): Promise<string> {
-  const loginUrl = '/api/user/login';
+  const loginUrl = '/auth/login';
   const response = await request(server).post(loginUrl).send({ login, password });
   if (response.status !== 200 && round < 2) {
     round && console.log('loop login', round);

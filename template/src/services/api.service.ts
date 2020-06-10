@@ -1,4 +1,4 @@
-import moleculer, { Context } from 'moleculer';
+import moleculer, { Context, Errors } from 'moleculer';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import cors from 'cors';
