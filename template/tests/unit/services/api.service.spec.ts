@@ -30,14 +30,14 @@ describe('Unit tests for Api service', () => {
 
   describe('authenticate', () => {
     let mockRequest: any;
-    let context: Context<{}, UserAuthMeta>;
+    let context: Context<Record<string, unknown>, UserAuthMeta>;
 
     beforeEach(() => {
       mockRequest = {
         headers: {},
         $action: {}
       };
-      context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context = new Context<Record<string, unknown>, UserAuthMeta>(broker, endpoint);
     });
 
     it('without headers', async () => {
@@ -61,7 +61,7 @@ describe('Unit tests for Api service', () => {
       });
     });
     it('with headers with bearer token', async () => {
-      const call = jest.fn().mockResolvedValue(new UserEntity());
+      const call = jest.fn().mockResolvedValue({ ...new UserEntity(), active: true });
       Context.prototype.call = call;
       const token = 'any_jwt_token';
       mockRequest = {
@@ -103,7 +103,7 @@ describe('Unit tests for Api service', () => {
 
   describe('authorize', () => {
     let mockRequest: any;
-    let context: Context<{}, UserAuthMeta>;
+    let context: Context<Record<string, unknown>, UserAuthMeta>;
     const user = {
       _id: '1234',
       roles: [UserRole.USER],
@@ -120,7 +120,7 @@ describe('Unit tests for Api service', () => {
         $action: {},
         $route: {}
       };
-      context = new Context<{}, UserAuthMeta>(broker, endpoint);
+      context = new Context<Record<string, unknown>, UserAuthMeta>(broker, endpoint);
     });
 
     beforeEach(() => expect.hasAssertions());

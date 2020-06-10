@@ -7,7 +7,14 @@ import { Response } from 'express';
 import pick from 'lodash/pick';
 import { Config } from '../common';
 import { Method, Service } from '@d0whc3r/moleculer-decorators';
-import { RequestMessage, UserAuthMeta, UserJWT, UserRole, UserRolesParams, UserTokenParams } from '../types';
+import {
+  RequestMessage,
+  UserJWT,
+  UserRole,
+  UserRolesParams,
+  UserTokenParams,
+  UserAuthMeta
+} from '../types';
 
 @Service({
   name: 'api',
@@ -133,7 +140,7 @@ import { RequestMessage, UserAuthMeta, UserJWT, UserRole, UserRolesParams, UserT
       },
       {
         path: '/api',
-        whitelist: [/^(?!\$node\..*|user\.login|api\.listAliases).*/],
+        whitelist: [/^(?!\$node\.|user\.login|api\.listAliases).*/],
 
         // Route-level Express middlewares. More info: https://moleculer.services/docs/0.14/moleculer-web.html#Middlewares
         use: [],

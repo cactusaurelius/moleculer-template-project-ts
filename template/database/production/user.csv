@@ -1,2 +1,2 @@
-_id,login,password,firstName,lastName,email,langKey,roles,activated,createdBy,createdDate,lastModifiedBy,lastModifiedDate
+_id,login,password,firstName,lastName,email,langKey,roles,active,createdBy,createdDate,lastModifiedBy,lastModifiedDate
 5eb71ba74676dfca3fef434f,superadmin,123456,sadmin,sadmin,sadmin@admin.com,es,ROLE_SUPERADMIN|,true,5eb71ba74676dfca3fef434f,2020-05-09T21:11:16.887Z,,
